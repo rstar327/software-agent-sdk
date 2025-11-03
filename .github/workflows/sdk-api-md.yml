@@ -1,0 +1,55 @@
+---
+name: SDK Markdown API Docs
+
+on:
+    pull_request:
+        paths:
+            - '**.py'
+            - pydoc-markdown.yml
+            - docs/scripts/gen_api_doc.sh
+            - pyproject.toml
+            - .github/workflows/sdk-api-md.yml
+    push:
+        branches: [main]
+
+jobs:
+    check-docs:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Clone docs repo
+              run: |
+                  git clone https://github.com/OpenHands/docs.git ../openhands-docs
+
+            - name: Install uv
+              run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: '3.12'
+
+            - name: Sync deps
+              run: uv sync --dev
+
+            - name: Regenerate Markdown API docs
+              run: uv run ./docs/scripts/gen_api_doc.sh ../openhands-docs/sdk/reference
+
+            - name: Fail if docs are stale
+              working-directory: ../openhands-docs
+              run: |
+                  git add -A
+                  if ! git diff --cached --quiet; then
+                    echo "::error ::Generated docs are out of date. Run uv run docs/scripts/gen_api_doc.sh and commit changes in the docs repo (sdk/reference).";
+                    git status --porcelain
+                    exit 1
+                  fi
+
+            - name: Upload generated docs (artifact)
+              uses: actions/upload-artifact@v4
+              with:
+                  name: sdk-api-md
+                  path: ../openhands-docs/sdk/reference

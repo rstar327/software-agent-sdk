@@ -13,6 +13,13 @@ def select_responses_options(
     store: bool | None,
 ) -> dict[str, Any]:
     """Behavior-preserving extraction of _normalize_responses_kwargs."""
+    # Check if user explicitly tried to set temperature for Responses API
+    if "temperature" in user_kwargs:
+        raise ValueError(
+            "The 'temperature' parameter is not supported for Responses API. "
+            "Responses API models use a fixed temperature internally."
+        )
+
     # Apply defaults for keys that are not forced by policy
     out = apply_defaults_if_absent(
         user_kwargs,
@@ -22,11 +29,7 @@ def select_responses_options(
     )
 
     # Enforce sampling/tool behavior for Responses path
-    # Models that use Responses API don't need temperature set
-    # temperature = 1 is documented as default
-    # while other values 0..2 are documented to work, but don't appear to
-    # (400 from OpenAI)
-    out.pop("temperature", None)
+    # Temperature defaults to None for Responses API (not set at all)
     out["tool_choice"] = "auto"
 
     # Store defaults to False (stateless) unless explicitly provided

@@ -65,9 +65,18 @@ def test_normalize_responses_kwargs_policy():
     llm.enable_encrypted_reasoning = True
     llm.max_output_tokens = 128
 
-    out = select_responses_options(
-        llm, {"temperature": 0.3}, include=["text.output_text"], store=None
-    )
+    # Test that passing temperature raises an error
+    try:
+        select_responses_options(
+            llm, {"temperature": 0.3}, include=["text.output_text"], store=None
+        )
+        assert False, "Expected ValueError when setting temperature"
+    except ValueError as e:
+        assert "temperature" in str(e).lower()
+        assert "not supported" in str(e).lower()
+
+    # Test without temperature - should work fine
+    out = select_responses_options(llm, {}, include=["text.output_text"], store=None)
     # Temperature should NOT be set for Responses API models like gpt-5-mini
     assert "temperature" not in out
     assert out["tool_choice"] == "auto"
@@ -89,9 +98,18 @@ def test_normalize_responses_kwargs_non_reasoning_model():
 
     llm.max_output_tokens = 256
 
-    out = select_responses_options(
-        llm, {"temperature": 0.3}, include=["text.output_text"], store=None
-    )
+    # Test that passing temperature raises an error (same as reasoning models)
+    try:
+        select_responses_options(
+            llm, {"temperature": 0.3}, include=["text.output_text"], store=None
+        )
+        assert False, "Expected ValueError when setting temperature"
+    except ValueError as e:
+        assert "temperature" in str(e).lower()
+        assert "not supported" in str(e).lower()
+
+    # Test without temperature - should work fine
+    out = select_responses_options(llm, {}, include=["text.output_text"], store=None)
     # Temperature should NOT be set for Responses API models
     assert "temperature" not in out
     assert out["tool_choice"] == "auto"

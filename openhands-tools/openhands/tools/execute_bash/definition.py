@@ -211,6 +211,12 @@ TOOL_DESCRIPTION = """Execute a bash command in the terminal within a persistent
 ### Output Handling
 * Output truncation: If the output exceeds a maximum length, it will be truncated before being returned.
 
+### Credential Access
+* Automatic secret injection: When you reference a registered secret key in your bash command, the secret value will be automatically exported as an environment variable before your command executes.
+* How to use secrets: Simply reference the secret key in your command (e.g., `echo $GITHUB_TOKEN` or `curl -H "Authorization: Bearer $API_KEY" https://api.example.com`). The system will detect the key name in your command text and export it automatically.
+* Secret detection: The system performs case-insensitive matching to find secret keys in your command text. If a registered secret key appears anywhere in your command, its value will be made available as an environment variable.
+* Security: Secret values are automatically masked in command output to prevent accidental exposure. You will see `<secret-hidden>` instead of the actual secret value in the output.
+
 ### Terminal Reset
 * Terminal reset: If the terminal becomes unresponsive, you can set the "reset" parameter to `true` to create a new terminal session. This will terminate the current session and start fresh.
 * Warning: Resetting the terminal will lose all previously set environment variables, working directory changes, and any running processes. Use this only when the terminal stops responding to commands.

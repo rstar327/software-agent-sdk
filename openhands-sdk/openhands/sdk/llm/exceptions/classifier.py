@@ -13,7 +13,6 @@ LONG_PROMPT_PATTERNS: list[str] = [
     "please reduce the length of",
     "the request exceeds the available context size",
     "context length exceeded",
-    "input exceeds the context window",
 ]
 
 

@@ -157,16 +157,23 @@ class BashExecutor(ToolExecutor[ExecuteBashAction, ExecuteBashObservation]):
             self._export_envs(action, conversation)
             observation = self.session.execute(action)
 
-        # Apply automatic secrets masking
-        if observation.output and conversation is not None:
+        # Apply automatic secrets masking and populate available secrets
+        if conversation is not None:
             try:
                 secret_registry = conversation.state.secret_registry
-                masked_output = secret_registry.mask_secrets_in_output(
-                    observation.output
-                )
-                if masked_output:
-                    data = observation.model_dump(exclude={"output"})
-                    return ExecuteBashObservation(**data, output=masked_output)
+
+                # Populate available secrets in metadata
+                available_secrets = list(secret_registry.secret_sources.keys())
+                observation.metadata.available_secrets = available_secrets
+
+                # Mask secrets in output if present
+                if observation.output:
+                    masked_output = secret_registry.mask_secrets_in_output(
+                        observation.output
+                    )
+                    if masked_output:
+                        data = observation.model_dump(exclude={"output"})
+                        return ExecuteBashObservation(**data, output=masked_output)
             except Exception:
                 pass
 

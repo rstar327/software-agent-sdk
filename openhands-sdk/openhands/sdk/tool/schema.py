@@ -112,7 +112,9 @@ class Schema(DiscriminatedUnionMixin):
         it automatically decodes the string using json.loads().
 
         This handles cases where LLMs (like GLM-4) return array/object values
-        as JSON strings instead of native JSON arrays/objects.
+        as JSON strings instead of native JSON arrays/objects i.e.
+        <parameter=view_range>"[1, 100]"</parameter> instead of
+        <parameter=view_range>[1, 100]</parameter>.
 
         Args:
             data: The input data (usually a dict) before validation.

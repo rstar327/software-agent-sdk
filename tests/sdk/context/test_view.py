@@ -28,7 +28,7 @@ def test_view_preserves_uncondensed_lists() -> None:
     actions.
     """
     events: list[Event] = [message_event(f"Event {i}") for i in range(5)]
-    view = View.from_events(events, is_security_analyzer_enabled=False)
+    view = View.from_events(events)
     assert len(view) == 5
     assert view.events == events
 
@@ -49,7 +49,7 @@ def test_view_forgets_events() -> None:
     ]
 
     # All events should be forgotten and removed.
-    view = View.from_events(events, is_security_analyzer_enabled=False)
+    view = View.from_events(events)
     assert view.events == []
 
 
@@ -71,7 +71,7 @@ def test_view_keeps_non_forgotten_events() -> None:
             ),
         ]
 
-        view = View.from_events(events, is_security_analyzer_enabled=False)
+        view = View.from_events(events)
 
         # We should have one less message event
         assert len(view.events) == len(message_events) - 1
@@ -93,7 +93,7 @@ def test_view_inserts_summary() -> None:
                 llm_response_id="condensation_response_1",
             ),
         ]
-        view = View.from_events(events, is_security_analyzer_enabled=False)
+        view = View.from_events(events)
 
         assert len(view) == 6  # 5 message events + 1 summary observation
         for index, event in enumerate(view.events):
@@ -137,7 +137,7 @@ def test_no_condensation_action_in_view() -> None:
     )
     events.extend(message_events[2:])
 
-    view = View.from_events(events, is_security_analyzer_enabled=False)
+    view = View.from_events(events)
 
     # Check that no condensation is present in the view
     for event in view:
@@ -157,7 +157,7 @@ def test_unhandled_condensation_request_with_no_condensation() -> None:
         CondensationRequest(),
         message_event("Event 2"),
     ]
-    view = View.from_events(events, is_security_analyzer_enabled=False)
+    view = View.from_events(events)
 
     # Should be marked as having an unhandled condensation request
     assert view.unhandled_condensation_request is True
@@ -188,7 +188,7 @@ def test_handled_condensation_request_with_condensation_action() -> None:
         )
     )
     events.append(message_event("Event 3"))
-    view = View.from_events(events, is_security_analyzer_enabled=False)
+    view = View.from_events(events)
 
     # Should NOT be marked as having an unhandled condensation request
     assert view.unhandled_condensation_request is False
@@ -214,7 +214,7 @@ def test_multiple_condensation_requests_pattern() -> None:
         CondensationRequest(),  # Second request - should be unhandled
         message_event(content="Event 3"),
     ]
-    view = View.from_events(events, is_security_analyzer_enabled=False)
+    view = View.from_events(events)
 
     # Should be marked as having an unhandled condensation request (the second one)
     assert view.unhandled_condensation_request is True
@@ -239,7 +239,7 @@ def test_condensation_action_before_request() -> None:
         CondensationRequest(),  # This should be unhandled
         message_event(content="Event 2"),
     ]
-    view = View.from_events(events, is_security_analyzer_enabled=False)
+    view = View.from_events(events)
 
     # Should be marked as having an unhandled condensation request
     assert view.unhandled_condensation_request is True
@@ -261,7 +261,7 @@ def test_no_condensation_events() -> None:
         message_event(content="Event 1"),
         message_event(content="Event 2"),
     ]
-    view = View.from_events(events, is_security_analyzer_enabled=False)
+    view = View.from_events(events)
 
     # Should NOT be marked as having an unhandled condensation request
     assert view.unhandled_condensation_request is False
@@ -298,7 +298,7 @@ def test_condensation_request_always_removed_from_view() -> None:
         Condensation(forgotten_event_ids=[], llm_response_id="condensation_response_1"),
         message_event(content="Event 2"),
     ]
-    view_handled = View.from_events(events_handled, is_security_analyzer_enabled=False)
+    view_handled = View.from_events(events_handled)
 
     assert view_handled.unhandled_condensation_request is False
     assert len(view_handled) == 3  # Only MessageEvents
@@ -310,7 +310,7 @@ def test_condensation_request_always_removed_from_view() -> None:
 def test_condensations_field_empty_when_no_condensations() -> None:
     """Test that condensations field is empty when there are no condensation events."""
     events: list[Event] = [message_event(f"Event {i}") for i in range(3)]
-    view = View.from_events(events, is_security_analyzer_enabled=False)
+    view = View.from_events(events)
 
     assert view.condensations == []
     assert view.most_recent_condensation is None
@@ -350,7 +350,7 @@ def test_condensations_field_stores_all_condensations_in_order() -> None:
         condensation3,
     ]
 
-    view = View.from_events(events, is_security_analyzer_enabled=False)
+    view = View.from_events(events)
 
     # Check that all condensations are stored in order
     assert len(view.condensations) == 3
@@ -377,7 +377,7 @@ def test_most_recent_condensation_property() -> None:
         llm_response_id="condensation_response_1",
     )
     events_single: list[Event] = [*message_events, condensation1]
-    view_single = View.from_events(events_single, is_security_analyzer_enabled=False)
+    view_single = View.from_events(events_single)
     assert view_single.most_recent_condensation == condensation1
 
     # Test with multiple condensations
@@ -428,7 +428,7 @@ def test_condensations_field_with_mixed_events() -> None:
         message_events[3],
     ]
 
-    view = View.from_events(events, is_security_analyzer_enabled=False)
+    view = View.from_events(events)
 
     # Only actual Condensation events should be in the condensations field
     assert len(view.condensations) == 2
@@ -440,7 +440,7 @@ def test_condensations_field_with_mixed_events() -> None:
 def test_summary_event_index_none_when_no_summary() -> None:
     """Test that summary_event_index is None when there's no summary."""
     events: list[Event] = [message_event(f"Event {i}") for i in range(3)]
-    view = View.from_events(events, is_security_analyzer_enabled=False)
+    view = View.from_events(events)
 
     assert view.summary_event_index is None
     assert view.summary_event is None
@@ -465,7 +465,7 @@ def test_summary_event_index_none_when_condensation_has_no_summary() -> None:
         message_events[2],
     ]
 
-    view = View.from_events(events, is_security_analyzer_enabled=False)
+    view = View.from_events(events)
 
     assert view.summary_event_index is None
     assert view.summary_event is None
@@ -494,7 +494,7 @@ def test_summary_event_index_and_event_with_summary() -> None:
         message_events[3],
     ]
 
-    view = View.from_events(events, is_security_analyzer_enabled=False)
+    view = View.from_events(events)
 
     # Should have summary at index 1
     assert view.summary_event_index == 1
@@ -539,7 +539,7 @@ def test_summary_event_with_multiple_condensations() -> None:
         message_events[4],
     ]
 
-    view = View.from_events(events, is_security_analyzer_enabled=False)
+    view = View.from_events(events)
 
     # Should use the most recent condensation's summary
     assert view.summary_event_index == 1
@@ -569,7 +569,7 @@ def test_summary_event_with_condensation_without_offset() -> None:
         message_events[2],
     ]
 
-    view = View.from_events(events, is_security_analyzer_enabled=False)
+    view = View.from_events(events)
 
     assert view.summary_event_index is None
     assert view.summary_event is None
@@ -593,7 +593,7 @@ def test_summary_event_with_zero_offset() -> None:
         message_events[2],
     ]
 
-    view = View.from_events(events, is_security_analyzer_enabled=False)
+    view = View.from_events(events)
 
     assert view.summary_event_index == 0
     assert view.summary_event is not None

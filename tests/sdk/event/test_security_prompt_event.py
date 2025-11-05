@@ -78,7 +78,7 @@ def test_view_from_events_security_analyzer_enabled():
     assert any(isinstance(e, SecurityPromptEvent) for e in view_enabled.events)
 
     # When security analyzer is disabled, SecurityPromptEvent should be excluded
-    view_disabled = View.from_events(events, is_security_analyzer_enabled=False)
+    view_disabled = View.from_events(events)
     assert len(view_disabled.events) == 1
     assert not any(isinstance(e, SecurityPromptEvent) for e in view_disabled.events)
     assert any(isinstance(e, SystemPromptEvent) for e in view_disabled.events)

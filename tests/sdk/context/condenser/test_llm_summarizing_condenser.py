@@ -88,13 +88,13 @@ def test_should_condense(mock_llm: LLM) -> None:
 
     # Create events below the threshold
     small_events = [message_event(f"Event {i}") for i in range(max_size)]
-    small_view = View.from_events(small_events, is_security_analyzer_enabled=False)
+    small_view = View.from_events(small_events)
 
     assert not condenser.should_condense(small_view)
 
     # Create events above the threshold
     large_events = [message_event(f"Event {i}") for i in range(max_size + 1)]
-    large_view = View.from_events(large_events, is_security_analyzer_enabled=False)
+    large_view = View.from_events(large_events)
 
     assert condenser.should_condense(large_view)
 
@@ -105,7 +105,7 @@ def test_condense_returns_view_when_no_condensation_needed(mock_llm: LLM) -> Non
     condenser = LLMSummarizingCondenser(llm=mock_llm, max_size=max_size)
 
     events: list[Event] = [message_event(f"Event {i}") for i in range(max_size)]
-    view = View.from_events(events, is_security_analyzer_enabled=False)
+    view = View.from_events(events)
 
     result = condenser.condense(view)
 
@@ -127,7 +127,7 @@ def test_condense_returns_condensation_when_needed(mock_llm: LLM) -> None:
     cast(Any, mock_llm).set_mock_response_content("Summary of forgotten events")
 
     events: list[Event] = [message_event(f"Event {i}") for i in range(max_size + 1)]
-    view = View.from_events(events, is_security_analyzer_enabled=False)
+    view = View.from_events(events)
 
     result = condenser.condense(view)
 

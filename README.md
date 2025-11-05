@@ -17,7 +17,7 @@ This folder contains my tasks of completely refactor [OpenHands](https://github.
     - read [openhands/core/runtime/tools/str_replace_editor/impl.py](openhands/core/runtime/tools/str_replace_editor/impl.py) for tool execute_fn
     - read [openhands/core/runtime/tools/str_replace_editor/definition.py](openhands/core/runtime/tools/str_replace_editor/definition.py) for how do we define a tool
     - read [openhands/core/runtime/tools/str_replace_editor/__init__.py](openhands/core/runtime/tools/str_replace_editor/__init__.py) for how we define each tool module
-- tools: `str_replace_editor`, `execute_bash`
+- tools: `str_replace_editor`, `execute_terminal`
 - minimal config (OpenHandsConfig, LLMConfig, MCPConfig): `openhands/core/config`
 - core set of LLM (w/o tests): `openhands/core/llm`
 - core set of microagent functionality (w/o full integration):

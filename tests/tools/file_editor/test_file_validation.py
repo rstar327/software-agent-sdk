@@ -109,12 +109,12 @@ def test_view_image_file_returns_image_content(tmp_path):
     # Create a minimal valid 1x1 PNG image (red pixel)
     # This is a complete, valid PNG file
     png_data = (
-        b'\x89PNG\r\n\x1a\n'  # PNG signature
-        b'\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01'  # IHDR chunk (1x1)
-        b'\x08\x02\x00\x00\x00\x90wS\xde'  # IHDR data + CRC
-        b'\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0\x00\x00\x00\x03\x00\x01'  # IDAT chunk
-        b'\x00\x18\xdd\x8d\xb4'  # IDAT CRC
-        b'\x00\x00\x00\x00IEND\xaeB`\x82'  # IEND chunk
+        b"\x89PNG\r\n\x1a\n"  # PNG signature
+        b"\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"  # IHDR chunk (1x1)
+        b"\x08\x02\x00\x00\x00\x90wS\xde"  # IHDR data + CRC
+        b"\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0\x00\x00\x00\x03\x00\x01"  # IDAT chunk
+        b"\x00\x18\xdd\x8d\xb4"  # IDAT CRC
+        b"\x00\x00\x00\x00IEND\xaeB`\x82"  # IEND chunk
     )
 
     with open(image_file, "wb") as f:
@@ -125,7 +125,7 @@ def test_view_image_file_returns_image_content(tmp_path):
 
     # Verify result contains ImageContent
     assert result is not None
-    assert hasattr(result, 'content')
+    assert hasattr(result, "content")
     assert len(result.content) == 2  # TextContent with message + ImageContent
     assert any(isinstance(c, ImageContent) for c in result.content)
 

@@ -110,11 +110,26 @@ def main() -> int:
         print(f"::warning title=SDK API::Failed to load previous from PyPI: {e}")
         return 0
 
+    def resolve(root, dotted: str):
+        # Try absolute path first
+        try:
+            return root[dotted]
+        except Exception:
+            pass
+        # Try relative to sdk_pkg
+        rel = dotted
+        if dotted.startswith(sdk_pkg + "."):
+            rel = dotted[len(sdk_pkg) + 1 :]
+        obj = root
+        for part in rel.split("."):
+            obj = obj[part]
+        return obj
+
     pairs = []
     for path in include:
         try:
-            old_obj = old_root[path]
-            new_obj = new_root[path]
+            old_obj = resolve(old_root, path)
+            new_obj = resolve(new_root, path)
             pairs.append((old_obj, new_obj))
         except Exception as e:
             print(f"::warning title=SDK API::Path {path} not found: {e}")

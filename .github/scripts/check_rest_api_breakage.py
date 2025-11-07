@@ -137,6 +137,17 @@ def main() -> int:
 
     out_dir = repo_root / ".github" / "scripts"
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    # Ensure oasdiff config is available in the working dir for the container
+    config_src = repo_root / ".github" / "oasdiff.yaml"
+    if config_src.exists():
+        try:
+            import shutil
+
+            shutil.copyfile(config_src, out_dir / "oasdiff.yaml")
+        except Exception as e:
+            print(f"::warning title=REST API::Failed to copy oasdiff config: {e}")
+
     old_path = out_dir / "openapi-old.json"
     new_path = out_dir / "openapi-new.json"
 

@@ -9,7 +9,7 @@ from openhands.sdk.llm import LLM
 
 def test_llm_config_defaults():
     """Test LLM with default values."""
-    config = LLM(model="gpt-4")
+    config = LLM(model="gpt-4", usage_id="test-llm")
     assert config.model == "gpt-4"
     assert config.api_key is None
     assert config.base_url is None
@@ -36,8 +36,8 @@ def test_llm_config_defaults():
     assert config.caching_prompt is True
     assert config.log_completions is False
     assert config.custom_tokenizer is None
-    assert config.native_tool_calling is None
-    assert config.reasoning_effort == "high"  # Default for non-Gemini models
+    assert config.native_tool_calling is True
+    assert config.reasoning_effort == "high"
     assert config.seed is None
     assert config.safety_settings is None
 
@@ -45,6 +45,7 @@ def test_llm_config_defaults():
 def test_llm_config_custom_values():
     """Test LLM with custom values."""
     config = LLM(
+        usage_id="test-llm",
         model="gpt-4",
         api_key=SecretStr("test-key"),
         base_url="https://api.example.com",
@@ -83,9 +84,9 @@ def test_llm_config_custom_values():
     )
 
     assert config.model == "gpt-4"
-    assert (
-        config.api_key is not None and config.api_key.get_secret_value() == "test-key"
-    )
+    assert config.api_key is not None
+    assert isinstance(config.api_key, SecretStr)
+    assert config.api_key.get_secret_value() == "test-key"
     assert config.base_url == "https://api.example.com"
     assert config.api_version == "v1"
     assert config.num_retries == 3
@@ -120,10 +121,10 @@ def test_llm_config_custom_values():
 
 def test_llm_config_secret_str():
     """Test that api_key is properly handled as SecretStr."""
-    config = LLM(model="gpt-4", api_key=SecretStr("secret-key"))
-    assert (
-        config.api_key is not None and config.api_key.get_secret_value() == "secret-key"
-    )
+    config = LLM(model="gpt-4", api_key=SecretStr("secret-key"), usage_id="test-llm")
+    assert config.api_key is not None
+    assert isinstance(config.api_key, SecretStr)
+    assert config.api_key.get_secret_value() == "secret-key"
     # Ensure the secret is not exposed in string representation
     assert "secret-key" not in str(config)
 
@@ -131,25 +132,24 @@ def test_llm_config_secret_str():
 def test_llm_config_aws_credentials():
     """Test AWS credentials handling."""
     config = LLM(
+        usage_id="test-llm",
         model="gpt-4",
         aws_access_key_id=SecretStr("test-access-key"),
         aws_secret_access_key=SecretStr("test-secret-key"),
         aws_region_name="us-east-1",
     )
-    assert (
-        config.aws_access_key_id is not None
-        and config.aws_access_key_id.get_secret_value() == "test-access-key"
-    )
-    assert (
-        config.aws_secret_access_key is not None
-        and config.aws_secret_access_key.get_secret_value() == "test-secret-key"
-    )
+    assert config.aws_access_key_id is not None
+    assert isinstance(config.aws_access_key_id, SecretStr)
+    assert config.aws_access_key_id.get_secret_value() == "test-access-key"
+    assert config.aws_secret_access_key is not None
+    assert isinstance(config.aws_secret_access_key, SecretStr)
+    assert config.aws_secret_access_key.get_secret_value() == "test-secret-key"
     assert config.aws_region_name == "us-east-1"
 
 
 def test_llm_config_openrouter_defaults():
     """Test OpenRouter default values."""
-    config = LLM(model="gpt-4")
+    config = LLM(model="gpt-4", usage_id="test-llm")
     assert config.openrouter_site_url == "https://docs.all-hands.dev/"
     assert config.openrouter_app_name == "OpenHands"
 
@@ -161,32 +161,37 @@ def test_llm_config_post_init_openrouter_env_vars():
             model="gpt-4",
             openrouter_site_url="https://custom.site.com",
             openrouter_app_name="CustomApp",
+            usage_id="test-llm",
         )
         assert os.environ.get("OR_SITE_URL") == "https://custom.site.com"
         assert os.environ.get("OR_APP_NAME") == "CustomApp"
 
 
 def test_llm_config_post_init_reasoning_effort_default():
-    """Test that reasoning_effort is set to 'high' by default for non-Gemini models."""
-    config = LLM(model="gpt-4")
+    """Test reasoning_effort defaults to high."""
+    config = LLM(model="gpt-4", usage_id="test-llm")
     assert config.reasoning_effort == "high"
 
-    # Test that Gemini models don't get default reasoning_effort
-    config = LLM(model="gemini-2.5-pro-experimental")
-    assert config.reasoning_effort is None
+    # Test that Gemini models also default to high
+    config = LLM(model="gemini-2.5-pro-experimental", usage_id="test-llm")
+    assert config.reasoning_effort == "high"
+
+    # Test that explicit reasoning_effort is preserved
+    config = LLM(model="gpt-4", reasoning_effort="low", usage_id="test-llm")
+    assert config.reasoning_effort == "low"
 
 
 def test_llm_config_post_init_azure_api_version():
     """Test that Azure models get default API version."""
-    config = LLM(model="azure/gpt-4")
+    config = LLM(model="azure/gpt-4", usage_id="test-llm")
     assert config.api_version == "2024-12-01-preview"
 
     # Test that non-Azure models don't get default API version
-    config = LLM(model="gpt-4")
+    config = LLM(model="gpt-4", usage_id="test-llm")
     assert config.api_version is None
 
     # Test that explicit API version is preserved
-    config = LLM(model="azure/gpt-4", api_version="custom-version")
+    config = LLM(model="azure/gpt-4", api_version="custom-version", usage_id="test-llm")
     assert config.api_version == "custom-version"
 
 
@@ -194,6 +199,7 @@ def test_llm_config_post_init_aws_env_vars():
     """Test that AWS credentials are set as environment variables."""
     with patch.dict(os.environ, {}, clear=True):
         LLM(
+            usage_id="test-llm",
             model="gpt-4",
             aws_access_key_id=SecretStr("test-access-key"),
             aws_secret_access_key=SecretStr("test-secret-key"),
@@ -206,7 +212,7 @@ def test_llm_config_post_init_aws_env_vars():
 
 def test_llm_config_log_completions_folder_default():
     """Test that log_completions_folder has a default value."""
-    config = LLM(model="gpt-4")
+    config = LLM(model="gpt-4", usage_id="test-llm")
     assert config.log_completions_folder is not None
     assert "completions" in config.log_completions_folder
 
@@ -214,32 +220,63 @@ def test_llm_config_log_completions_folder_default():
 def test_llm_config_extra_fields_forbidden():
     """Test that extra fields are forbidden."""
     with pytest.raises(ValidationError) as exc_info:
-        LLM(model="gpt-4", invalid_field="should_not_work")  # type: ignore
+        LLM(model="gpt-4", invalid_field="should_not_work", usage_id="test-llm")  # type: ignore
     assert "Extra inputs are not permitted" in str(exc_info.value)
 
 
 def test_llm_config_validation():
-    """Test basic validation of LLM fields."""
-    # Test that negative values are handled appropriately
+    """Test validation of LLM fields with ge constraints."""
+    # Test that negative values are rejected for fields with ge constraints
+    with pytest.raises(ValidationError) as exc_info:
+        LLM(
+            model="gpt-4",
+            num_retries=-1,  # Should fail: ge=0
+            retry_multiplier=-1,  # Should fail: ge=0
+            retry_min_wait=-1,  # Should fail: ge=0
+            retry_max_wait=-1,  # Should fail: ge=0
+            timeout=-1,  # Should fail: ge=0
+            max_message_chars=-1,  # Should fail: ge=1
+            temperature=-1,  # Should fail: ge=0
+            top_p=-1,  # Should fail: ge=0
+            usage_id="test-llm",
+        )
+
+    # Verify that the validation error contains expected field names
+    error_str = str(exc_info.value)
+    expected_fields = [
+        "num_retries",
+        "retry_multiplier",
+        "retry_min_wait",
+        "retry_max_wait",
+        "timeout",
+        "max_message_chars",
+        "temperature",
+        "top_p",
+    ]
+    for field in expected_fields:
+        assert field in error_str
+
+    # Test that valid values (>= constraints) work correctly
     config = LLM(
         model="gpt-4",
-        num_retries=-1,  # Should be allowed (might be used to disable retries)
-        retry_multiplier=-1,  # Should be allowed
-        retry_min_wait=-1,  # Should be allowed
-        retry_max_wait=-1,  # Should be allowed
-        timeout=-1,  # Should be allowed
-        max_message_chars=-1,  # Should be allowed
-        temperature=-1,  # Should be allowed
-        top_p=-1,  # Should be allowed
+        num_retries=0,  # Valid: ge=0
+        retry_multiplier=0.0,  # Valid: ge=0
+        retry_min_wait=0,  # Valid: ge=0
+        retry_max_wait=0,  # Valid: ge=0
+        timeout=0,  # Valid: ge=0
+        max_message_chars=1,  # Valid: ge=1
+        temperature=0.0,  # Valid: ge=0
+        top_p=0.0,  # Valid: ge=0
+        usage_id="test-llm",
     )
-    assert config.num_retries == -1
-    assert config.retry_multiplier == -1
-    assert config.retry_min_wait == -1
-    assert config.retry_max_wait == -1
-    assert config.timeout == -1
-    assert config.max_message_chars == -1
-    assert config.temperature == -1
-    assert config.top_p == -1
+    assert config.num_retries == 0
+    assert config.retry_multiplier == 0.0
+    assert config.retry_min_wait == 0
+    assert config.retry_max_wait == 0
+    assert config.timeout == 0
+    assert config.max_message_chars == 1
+    assert config.temperature == 0.0
+    assert config.top_p == 0.0
 
 
 def test_llm_config_model_variants():
@@ -254,7 +291,7 @@ def test_llm_config_model_variants():
     ]
 
     for model in models:
-        config = LLM(model=model)
+        config = LLM(model=model, usage_id="test-llm")
         assert config.model == model
 
 
@@ -262,13 +299,13 @@ def test_llm_config_boolean_fields():
     """Test boolean field handling."""
     config = LLM(
         model="gpt-4",
-        drop_params=True,
         modify_params=False,
         disable_vision=True,
         disable_stop_word=False,
         caching_prompt=True,
         log_completions=False,
         native_tool_calling=True,
+        usage_id="test-llm",
     )
 
     assert config.drop_params is True
@@ -301,10 +338,10 @@ def test_llm_config_optional_fields():
         disable_vision=None,
         disable_stop_word=None,
         custom_tokenizer=None,
-        native_tool_calling=None,
         reasoning_effort=None,
         seed=None,
         safety_settings=None,
+        usage_id="test-llm",
     )
 
     assert config.api_key is None
@@ -328,9 +365,6 @@ def test_llm_config_optional_fields():
     assert config.disable_vision is None
     assert config.disable_stop_word is None
     assert config.custom_tokenizer is None
-    assert config.native_tool_calling is None
-    assert (
-        config.reasoning_effort == "high"
-    )  # Even when set to None, post_init sets it to "high" for non-Gemini models
+    assert config.reasoning_effort is None  # Explicitly set to None overrides default
     assert config.seed is None
     assert config.safety_settings is None

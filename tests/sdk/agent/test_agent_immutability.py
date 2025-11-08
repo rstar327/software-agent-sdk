@@ -5,6 +5,7 @@ from pydantic import SecretStr, ValidationError
 
 from openhands.sdk.agent.agent import Agent
 from openhands.sdk.llm import LLM
+from openhands.sdk.security.llm_analyzer import LLMSecurityAnalyzer
 
 
 class TestAgentImmutability:
@@ -12,7 +13,9 @@ class TestAgentImmutability:
 
     def setup_method(self):
         """Set up test environment."""
-        self.llm = LLM(model="gpt-4", api_key=SecretStr("test-key"))
+        self.llm: LLM = LLM(
+            model="gpt-4", api_key=SecretStr("test-key"), usage_id="test-llm"
+        )
 
     def test_agent_is_frozen(self):
         """Test that Agent instances are frozen (immutable)."""
@@ -54,8 +57,21 @@ class TestAgentImmutability:
 
     def test_agent_with_different_configs_are_different(self):
         """Test that agents with different configs produce different system messages."""
-        agent1 = Agent(llm=self.llm, tools=[], system_prompt_kwargs={"cli_mode": True})
-        agent2 = Agent(llm=self.llm, tools=[], system_prompt_kwargs={"cli_mode": False})
+        # Use LLMSecurityAnalyzer so that the security risk assessment section is
+        # included and cli_mode differences will be visible in the system message
+        security_analyzer = LLMSecurityAnalyzer()
+        agent1 = Agent(
+            llm=self.llm,
+            tools=[],
+            security_analyzer=security_analyzer,
+            system_prompt_kwargs={"cli_mode": True},
+        )
+        agent2 = Agent(
+            llm=self.llm,
+            tools=[],
+            security_analyzer=security_analyzer,
+            system_prompt_kwargs={"cli_mode": False},
+        )
 
         # System messages should be different due to cli_mode
         msg1 = agent1.system_message
@@ -81,7 +97,7 @@ class TestAgentImmutability:
         # Test inherited properties from AgentBase
         assert agent.llm == self.llm
 
-        assert isinstance(agent.tools, dict)
+        assert isinstance(agent.tools, list)
         assert agent.agent_context is None
         assert agent.name == "Agent"
         assert isinstance(agent.prompt_dir, str)
@@ -135,8 +151,14 @@ class TestAgentImmutability:
 
     def test_agent_model_copy_creates_new_instance(self):
         """Test that model_copy creates a new Agent instance with modified fields."""
+        # Use LLMSecurityAnalyzer so that the security risk assessment section is
+        # included and cli_mode differences will be visible in the system message
+        security_analyzer = LLMSecurityAnalyzer()
         original_agent = Agent(
-            llm=self.llm, tools=[], system_prompt_kwargs={"cli_mode": True}
+            llm=self.llm,
+            tools=[],
+            security_analyzer=security_analyzer,
+            system_prompt_kwargs={"cli_mode": True},
         )
 
         # Create a copy with modified fields

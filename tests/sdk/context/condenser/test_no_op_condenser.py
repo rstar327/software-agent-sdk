@@ -1,6 +1,6 @@
 from openhands.sdk.context.condenser.no_op_condenser import NoOpCondenser
 from openhands.sdk.context.view import View
-from openhands.sdk.event import Event
+from openhands.sdk.event.base import Event
 from openhands.sdk.event.llm_convertible import MessageEvent
 from openhands.sdk.llm import Message, TextContent
 

@@ -1,12 +1,10 @@
-"""Tests for events_to_messages conversion in openhands/sdk/event/base.py."""  # type: ignore
+"""Tests for events_to_messages conversion in openhands-sdk/event/base.py."""  # type: ignore
 
 import json
 from collections.abc import Sequence
 from typing import cast
 
 import pytest
-from litellm import ChatCompletionMessageToolCall
-from litellm.types.utils import Function
 
 from openhands.sdk.event.base import LLMConvertibleEvent
 from openhands.sdk.event.llm_convertible import (
@@ -16,34 +14,40 @@ from openhands.sdk.event.llm_convertible import (
     ObservationEvent,
     SystemPromptEvent,
 )
-from openhands.sdk.llm import ImageContent, Message, TextContent
-from openhands.sdk.tool import ActionBase, ObservationBase
+from openhands.sdk.llm import (
+    ImageContent,
+    Message,
+    MessageToolCall,
+    TextContent,
+)
+from openhands.sdk.tool import Action, Observation
 
 
-class MockAction(ActionBase):
+class EventsToMessagesMockAction(Action):
     """Mock action for testing."""
 
     command: str
 
 
-class MockObservation(ObservationBase):
+class EventsToMessagesMockObservation(Observation):
     """Mock observation for testing."""
 
     result: str
 
     @property
-    def agent_observation(self) -> Sequence[TextContent | ImageContent]:
+    def to_llm_content(self) -> Sequence[TextContent | ImageContent]:
         return [TextContent(text=self.result)]
 
 
 def create_tool_call(
     call_id: str, function_name: str, arguments: dict
-) -> ChatCompletionMessageToolCall:
-    """Helper to create a ChatCompletionMessageToolCall."""
-    return ChatCompletionMessageToolCall(
+) -> MessageToolCall:
+    """Helper to create a MessageToolCall."""
+    return MessageToolCall(
         id=call_id,
-        function=Function(name=function_name, arguments=json.dumps(arguments)),
-        type="function",
+        name=function_name,
+        arguments=json.dumps(arguments),
+        origin="completion",
     )
 
 
@@ -55,7 +59,7 @@ def create_action_event(
     action_args: dict,
 ) -> ActionEvent:
     """Helper to create an ActionEvent."""
-    action = MockAction(command=action_args.get("command", "test"))
+    action = EventsToMessagesMockAction(command=action_args.get("command", "test"))
     tool_call = create_tool_call(tool_call_id, tool_name, action_args)
 
     return ActionEvent(
@@ -100,7 +104,7 @@ class TestEventsToMessages:
         """Test conversion of single ActionEvent."""
         action_event = create_action_event(
             thought_text="I need to run a command",
-            tool_name="execute_bash",
+            tool_name="terminal",
             tool_call_id="call_123",
             llm_response_id="response_1",
             action_args={"command": "ls -la"},
@@ -117,7 +121,7 @@ class TestEventsToMessages:
         assert messages[0].tool_calls is not None
         assert len(messages[0].tool_calls) == 1
         assert messages[0].tool_calls[0].id == "call_123"
-        assert messages[0].tool_calls[0].function.name == "execute_bash"
+        assert messages[0].tool_calls[0].name == "terminal"
 
     def test_parallel_function_calling_same_response_id(self):
         """Test parallel function calling with multiple ActionEvents having same ID.
@@ -138,7 +142,7 @@ class TestEventsToMessages:
         action2 = ActionEvent(
             source="agent",
             thought=[],  # Empty thought for subsequent actions in parallel call
-            action=MockAction(command="test"),
+            action=EventsToMessagesMockAction(command="test"),
             tool_name="get_current_weather",
             tool_call_id="call_Tokyo",
             tool_call=create_tool_call(
@@ -152,7 +156,7 @@ class TestEventsToMessages:
         action3 = ActionEvent(
             source="agent",
             thought=[],  # Empty thought for subsequent actions in parallel call
-            action=MockAction(command="test"),
+            action=EventsToMessagesMockAction(command="test"),
             tool_name="get_current_weather",
             tool_call_id="call_Paris",
             tool_call=create_tool_call(
@@ -190,13 +194,13 @@ class TestEventsToMessages:
 
         # All should be weather function calls
         for tool_call in tool_calls:
-            assert tool_call.function.name == "get_current_weather"
+            assert tool_call.name == "get_current_weather"
 
     def test_multiple_separate_action_events(self):
         """Test multiple ActionEvents with different response_ids (separate calls)."""
         action1 = create_action_event(
             thought_text="First command",
-            tool_name="execute_bash",
+            tool_name="terminal",
             tool_call_id="call_1",
             llm_response_id="response_1",
             action_args={"command": "ls"},
@@ -204,7 +208,7 @@ class TestEventsToMessages:
 
         action2 = create_action_event(
             thought_text="Second command",
-            tool_name="execute_bash",
+            tool_name="terminal",
             tool_call_id="call_2",
             llm_response_id="response_2",
             action_args={"command": "pwd"},
@@ -251,7 +255,7 @@ class TestEventsToMessages:
         # Observation event
         observation_event = ObservationEvent(
             source="environment",
-            observation=MockObservation(result="Sunny, 72°F"),
+            observation=EventsToMessagesMockObservation(result="Sunny, 72°F"),
             action_id="action_123",
             tool_name="get_weather",
             tool_call_id="call_weather",
@@ -284,13 +288,17 @@ class TestEventsToMessages:
 
     def test_agent_error_event(self):
         """Test conversion of AgentErrorEvent."""
-        error_event = AgentErrorEvent(error="Command failed with exit code 1")
+        error_event = AgentErrorEvent(
+            error="Command failed with exit code 1",
+            tool_call_id="call_err",
+            tool_name="terminal",
+        )
 
         events = [error_event]
         messages = LLMConvertibleEvent.events_to_messages(events)  # type: ignore
 
         assert len(messages) == 1
-        assert messages[0].role == "user"
+        assert messages[0].role == "tool"
         assert messages[0].content[0].text == "Command failed with exit code 1"  # type: ignore
 
     def test_complex_parallel_and_sequential_mix(self):
@@ -318,7 +326,7 @@ class TestEventsToMessages:
         weather_nyc = ActionEvent(
             source="agent",
             thought=[],  # Empty for parallel call
-            action=MockAction(command="test"),
+            action=EventsToMessagesMockAction(command="test"),
             tool_name="get_weather",
             tool_call_id="call_nyc_weather",
             tool_call=create_tool_call(
@@ -330,7 +338,7 @@ class TestEventsToMessages:
         # Third: Weather observations
         obs_sf = ObservationEvent(
             source="environment",
-            observation=MockObservation(result="SF: Sunny, 65°F"),
+            observation=EventsToMessagesMockObservation(result="SF: Sunny, 65°F"),
             action_id="action_sf",
             tool_name="get_weather",
             tool_call_id="call_sf_weather",
@@ -338,7 +346,7 @@ class TestEventsToMessages:
 
         obs_nyc = ObservationEvent(
             source="environment",
-            observation=MockObservation(result="NYC: Cloudy, 45°F"),
+            observation=EventsToMessagesMockObservation(result="NYC: Cloudy, 45°F"),
             action_id="action_nyc",
             tool_name="get_weather",
             tool_call_id="call_nyc_weather",
@@ -347,7 +355,7 @@ class TestEventsToMessages:
         # Fourth: Separate file listing call (different response_id)
         list_files = create_action_event(
             thought_text="Now I'll list the files",
-            tool_name="execute_bash",
+            tool_name="terminal",
             tool_call_id="call_ls",
             llm_response_id="list_files_response",
             action_args={"command": "ls -la"},
@@ -395,7 +403,7 @@ class TestEventsToMessages:
         action2 = ActionEvent(
             source="agent",
             thought=[TextContent(text="This should not be here!")],  # Non-empty thought
-            action=MockAction(command="test"),
+            action=EventsToMessagesMockAction(command="test"),
             tool_name="get_weather",
             tool_call_id="call_2",
             tool_call=create_tool_call("call_2", "get_weather", {"location": "NYC"}),
@@ -409,3 +417,39 @@ class TestEventsToMessages:
             match="Expected empty thought for multi-action events after the first one",
         ):
             LLMConvertibleEvent.events_to_messages(events)  # type: ignore
+
+    def test_action_event_with_none_action_round_trip_and_observation_match(self):
+        """Test ActionEvent with action=None round trip and observation match."""
+        thought = [TextContent(text="thinking...")]
+        tc = create_tool_call("call_ne", "missing_tool", {"x": 1})
+        action_event = ActionEvent(
+            source="agent",
+            thought=thought,
+            tool_call=tc,
+            tool_name=tc.name,
+            tool_call_id=tc.id,
+            llm_response_id="resp_events_1",
+            action=None,
+        )
+
+        # Convert to messages and ensure assistant message has single tool_call
+        messages = LLMConvertibleEvent.events_to_messages([action_event])
+        assert len(messages) == 1
+        assert messages[0].role == "assistant"
+        assert messages[0].tool_calls is not None and len(messages[0].tool_calls) == 1
+        assert messages[0].tool_calls[0].id == "call_ne"
+        assert messages[0].tool_calls[0].name == "missing_tool"
+
+        # Simulate an AgentErrorEvent that carries the same tool_call_id
+        err = AgentErrorEvent(
+            error="not found",
+            tool_call_id="call_ne",
+            tool_name="missing_tool",
+        )
+
+        msgs = LLMConvertibleEvent.events_to_messages([action_event, err])
+        # Should produce two messages: assistant tool call + tool error
+        assert len(msgs) == 2
+        assert msgs[0].role == "assistant"
+        assert msgs[1].role == "tool"
+        assert msgs[1].tool_call_id == "call_ne"

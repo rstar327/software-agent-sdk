@@ -1,8 +1,6 @@
 """Comprehensive tests for event serialization and deserialization."""
 
 import pytest
-from litellm import ChatCompletionMessageToolCall
-from litellm.types.utils import Function
 from pydantic import ValidationError
 
 from openhands.sdk.event import (
@@ -10,38 +8,44 @@ from openhands.sdk.event import (
     AgentErrorEvent,
     Condensation,
     CondensationRequest,
-    EventBase,
+    Event,
     MessageEvent,
     ObservationEvent,
     SystemPromptEvent,
 )
-from openhands.sdk.llm import TextContent
-from openhands.sdk.tool import ActionBase, ObservationBase
+from openhands.sdk.llm import (
+    Message,
+    MessageToolCall,
+    TextContent,
+)
+from openhands.sdk.tool import Action, Observation
 
 
-class MockEvent(EventBase):
+class EventSerializationMockEvent(Event):
     test_field: str = "test_value"
 
 
-class MockAction(ActionBase):
+class EventsSerializationMockAction(Action):
     """Mock action for testing."""
 
-    def execute(self) -> "MockObservation":
-        return MockObservation(content="mock result")
+    def execute(self) -> "EventsSerializationMockObservation":
+        return EventsSerializationMockObservation(
+            content=[TextContent(text="mock result")]
+        )
 
 
-class MockObservation(ObservationBase):
+class EventsSerializationMockObservation(Observation):
     """Mock observation for testing."""
 
-    content: str
+    pass
 
 
 def test_event_base_serialization() -> None:
-    """Test basic EventBase serialization/deserialization."""
-    event = MockEvent(source="agent", test_field="custom_value")
+    """Test basic Event serialization/deserialization."""
+    event = EventSerializationMockEvent(source="agent", test_field="custom_value")
 
     json_data = event.model_dump_json()
-    deserialized = MockEvent.model_validate_json(json_data)
+    deserialized = EventSerializationMockEvent.model_validate_json(json_data)
     assert deserialized == event
 
 
@@ -58,11 +62,12 @@ def test_system_prompt_event_serialization() -> None:
 
 def test_action_event_serialization() -> None:
     """Test ActionEvent serialization/deserialization."""
-    action = MockAction()
-    tool_call = ChatCompletionMessageToolCall(
+    action = EventsSerializationMockAction()
+    tool_call = MessageToolCall(
         id="call_123",
-        function=Function(name="mock_tool", arguments="{}"),
-        type="function",
+        name="mock_tool",
+        arguments="{}",
+        origin="completion",
     )
     event = ActionEvent(
         thought=[TextContent(text="I need to do something")],
@@ -85,12 +90,14 @@ def test_action_event_serialization() -> None:
     assert deserialized.tool_call_id == event.tool_call_id
     assert deserialized.tool_call == event.tool_call
     assert deserialized.llm_response_id == event.llm_response_id
-    # Action is deserialized as ActionBase, so we can't check exact equality
+    # Action is deserialized as Action, so we can't check exact equality
 
 
 def test_observation_event_serialization() -> None:
     """Test ObservationEvent serialization/deserialization."""
-    observation = MockObservation(content="test result")
+    observation = EventsSerializationMockObservation(
+        content=[TextContent(text="test result")]
+    )
     event = ObservationEvent(
         observation=observation,
         action_id="action_123",
@@ -108,7 +115,7 @@ def test_observation_event_serialization() -> None:
     assert deserialized.action_id == event.action_id
     assert deserialized.tool_name == event.tool_name
     assert deserialized.tool_call_id == event.tool_call_id
-    # Observation is deserialized as ObservationBase, so we can't check exact equality
+    # Observation is deserialized as Observation, so we can't check exact equality
 
 
 def test_message_event_serialization() -> None:
@@ -127,7 +134,9 @@ def test_message_event_serialization() -> None:
 
 def test_agent_error_event_serialization() -> None:
     """Test AgentErrorEvent serialization/deserialization."""
-    event = AgentErrorEvent(error="Something went wrong")
+    event = AgentErrorEvent(
+        error="Something went wrong", tool_call_id="call_001", tool_name="test_tool"
+    )
 
     json_data = event.model_dump_json()
     deserialized = AgentErrorEvent.model_validate_json(json_data)
@@ -139,6 +148,7 @@ def test_condensation_serialization() -> None:
     event = Condensation(
         summary="This is a summary",
         forgotten_event_ids=["event1", "event2", "event3", "event4", "event5"],
+        llm_response_id="condensation_response_1",
     )
 
     # Serialize
@@ -172,3 +182,22 @@ def test_extra_fields_forbidden():
         SystemPromptEvent.model_validate(data_with_extra)
 
     assert "extra_forbidden" in str(exc_info.value)
+
+
+def test_event_deserialize():
+    original = MessageEvent(
+        source="user",
+        llm_message=Message(
+            role="user",
+            content=[TextContent(text="Hello There!")],
+            cache_enabled=False,
+            vision_enabled=False,
+            function_calling_enabled=False,
+            force_string_serializer=False,
+        ),
+        activated_skills=[],
+        extended_content=[],
+    )
+    dumped = original.model_dump_json()
+    loaded = Event.model_validate_json(dumped)
+    assert loaded == original

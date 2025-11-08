@@ -100,67 +100,6 @@ When reviewing code, provide constructive feedback:
 
 **Next Steps**: [Clear action items]
 </ROLE>
-
-This repo has two python packages, with unit tests specifically written for each package.
-```
-├── Makefile
-├── README.mdx
-├── examples
-├── openhands
-│   ├── __init__.py
-│   ├── sdk
-│   │   ├── __init__.py
-│   │   ├── agent
-│   │   ├── config
-│   │   ├── context
-│   │   ├── conversation
-│   │   ├── llm
-│   │   ├── logger.py
-│   │   ├── pyproject.toml
-│   │   ├── tool
-│   │   └── utils
-│   └── tools
-│       ├── __init__.py
-│       ├── execute_bash
-│       │   ├── tool.py  # <- BashTool subclass
-│       ├── pyproject.toml
-│       ├── str_replace_editor
-│       │   ├── tool.py  # <- FileEditorTool subclass
-│       └── utils
-├── pyproject.toml
-├── tests
-│   ├── integration # <- integration test that involves both openhands/sdk and openhands/tools
-│   ├── sdk
-│   ├── tools
-└── uv.lock
-```
-
-## Tool Architecture
-
-The tools package now provides two patterns for tool usage:
-
-### Simplified Pattern (Recommended)
-```python
-from openhands.tools import BashTool, FileEditorTool
-
-tools = [
-    BashTool.create(working_dir=os.getcwd()),
-    FileEditorTool.create(),
-]
-```
-
-### Advanced Pattern (For Custom Tools)
-```python
-from openhands.tools import BashExecutor, execute_bash_tool
-
-# Explicit executor creation for reuse or customization
-bash_executor = BashExecutor(working_dir=os.getcwd())
-bash_tool = execute_bash_tool.set_executor(executor=bash_executor)
-```
-
-The simplified pattern eliminates the need for manual executor instantiation and `set_executor()` calls, making tool usage more intuitive and reducing boilerplate code.
-
-
 <DEV_SETUP>
 - Make sure you `make build` to configure the dependency first
 - We use pre-commit hooks `.pre-commit-config.yaml` that includes:
@@ -186,7 +125,9 @@ The simplified pattern eliminates the need for manual executor instantiation and
   - Please AVOID using # type: ignore[attr-defined] unless absolutely necessary. If the issue can be addressed by adding a few extra assert statements to verify types, prefer that approach instead!
   - For issue like # type: ignore[call-arg]: if you discover that the argument doesn’t actually exist, do not try to mock it again in tests. Instead, simply remove it.
 - Avoid doing in-line imports unless absolutely necessary (e.g., circular dependency).
-- Avoid getattr/hasattr guards and instead enforce type correctness by relying on explicit type assertions and proper object usage, ensuring functions only receive the expected Pydantic models or typed inputs.
+- Avoid getattr/hasattr guards and instead enforce type correctness by relying on explicit type assertions and proper object usage, ensuring functions only receive the expected Pydantic models or typed inputs. Prefer type hints and validated models over runtime shape checks.
+- Prefer accessing typed attributes directly. If necessary, convert inputs up front into a canonical shape; avoid purely hypothetical fallbacks.
+- Use real newlines in commit messages; do not write literal "\n".
 </CODE>
 
 <TESTING>
@@ -198,3 +139,29 @@ The simplified pattern eliminates the need for manual executor instantiation and
 - If you find yourself duplicating logics in preparing mocks, loading data etc, these logic should be fixtures in conftest.py!
 - Please test only the logic implemented in the current codebase. Do not test functionality (e.g., BaseModel.model_dumps()) that is not implemented in this repository.
 </TESTING>
+
+<DOCUMENTATION_WORKFLOW>
+# Documentation Repository
+
+Documentation lives in **github.com/OpenHands/docs** under the `sdk/` folder. When adding features or modifying APIs, you MUST update documentation there.
+
+## Workflow
+
+1. Clone docs repo: `git clone https://github.com/OpenHands/docs.git /workspace/project/openhands-docs`
+2. Create matching branch in both repos
+3. Update documentation in `openhands-docs/sdk/` folder
+4. **If you are creating a PR to `OpenHands/agent-sdk`**, you must also create a corresponding PR to `OpenHands/docs` with documentation updates in the `sdk/` folder
+5. Cross-reference both PRs in their descriptions
+
+Example:
+```bash
+cd /workspace/project/openhands-docs
+git checkout -b <feature-name>
+# Edit files in sdk/ folder
+git add sdk/
+git commit -m "Document <feature>
+
+Co-authored-by: openhands <openhands@all-hands.dev>"
+git push -u origin <feature-name>
+```
+</DOCUMENTATION_WORKFLOW>

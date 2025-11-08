@@ -5,10 +5,9 @@ test assets when the LLM implementation changes.
 """
 
 import json
-import os
 import shutil
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import SecretStr
 
@@ -20,16 +19,17 @@ from openhands.sdk import (
     LLMConvertibleEvent,
     Message,
     TextContent,
-    Tool,
     get_logger,
 )
-from openhands.tools import BashTool, FileEditorTool
+from openhands.sdk.tool import Tool, register_tool
+from openhands.tools.file_editor import FileEditorTool
+from openhands.tools.terminal import TerminalTool
 
 
 logger = get_logger(__name__)
 
 
-def get_output_dir(output_dir: Optional[Path] = None) -> Path:
+def get_output_dir(output_dir: Path | None = None) -> Path:
     """Get output directory, creating if needed."""
     dir_path = Path(__file__).parent
     dir_path.mkdir(parents=True, exist_ok=True)
@@ -40,7 +40,7 @@ def create_llm(
     api_key: str,
     base_url: str,
     model: str,
-    log_completions_folder: Optional[str] = None,
+    log_completions_folder: str | None = None,
     **kwargs,
 ) -> LLM:
     """Create an LLM instance for data generation."""
@@ -53,13 +53,17 @@ def create_llm(
     }
     if log_completions_folder:
         llm_kwargs["log_completions_folder"] = log_completions_folder
-    return LLM(**llm_kwargs)
+    return LLM(**llm_kwargs, usage_id="test-llm")
 
 
-def create_tools(working_dir: Optional[str] = None) -> List[Tool]:
-    """Create standard tools for testing."""
-    cwd = working_dir or os.getcwd()
-    return [BashTool.create(working_dir=cwd), FileEditorTool.create()]
+def create_tools(working_dir: str | None = None) -> list[Tool]:
+    """Create standard tool specifications for testing."""
+    register_tool("TerminalTool", TerminalTool)
+    register_tool("FileEditorTool", FileEditorTool)
+    return [
+        Tool(name="TerminalTool"),
+        Tool(name="FileEditorTool"),
+    ]
 
 
 def run_conversation(
@@ -69,8 +73,8 @@ def run_conversation(
     user_message: str,
     output_dir: Path,
     output_filename: str,
-    log_completions_folder: Optional[str] = None,
-) -> List[Dict[str, Any]]:
+    log_completions_folder: str | None = None,
+) -> list[dict[str, Any]]:
     """Run a conversation and collect LLM messages."""
     llm = create_llm(api_key, base_url, model, log_completions_folder)
     tools = create_tools()
@@ -81,7 +85,7 @@ def run_conversation(
     def conversation_callback(event: Event):
         logger.info(f"Found a conversation message: {str(event)[:200]}...")
         if isinstance(event, LLMConvertibleEvent):
-            llm_messages.append(event.to_llm_message().to_llm_dict())
+            llm_messages.append(event.to_llm_message().to_chat_dict())
 
     conversation = Conversation(agent=agent, callbacks=[conversation_callback])
     message = Message(role="user", content=[TextContent(text=user_message)])
@@ -103,7 +107,7 @@ def generate_test_data(
     user_message: str,
     output_dir: Path,
     is_function_calling: bool,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Generate test data for a specific model type."""
     data_type = "function calling" if is_function_calling else "non-function calling"
     logger.info(f"Generating {data_type} data with model: {model}")
@@ -207,14 +211,14 @@ def validate_generated_data(output_dir: Path) -> bool:
 def generate_all_test_data(
     api_key: str,
     base_url: str = "https://llm-proxy.eval.all-hands.dev",
-    output_dir: Optional[Path] = None,
+    output_dir: Path | None = None,
     fncall_model: str = "litellm_proxy/anthropic/claude-sonnet-4-20250514",
     nonfncall_model: str = "litellm_proxy/deepseek/deepseek-chat",
     user_message: str = (
         "Hello! Can you create a new Python file named hello.py that prints "
         "'Hello, World!'?"
     ),
-) -> Dict[str, List[Dict[str, Any]]]:
+) -> dict[str, list[dict[str, Any]]]:
     """Generate all test data."""
     logger.info("Generating all test data...")
 

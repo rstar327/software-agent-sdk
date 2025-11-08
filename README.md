@@ -1,435 +1,106 @@
-# OpenHands Agent SDK
+<a name="readme-top"></a>
 
-A clean, modular SDK for building AI agents with OpenHands. This project represents a complete architectural refactor from OpenHands V0, emphasizing simplicity, maintainability, and developer experience.
+<div align="center">
+  <img src="https://raw.githubusercontent.com/OpenHands/docs/main/openhands/static/img/logo.png" alt="Logo" width="200">
+  <h1 align="center">OpenHands Software Agent SDK </h1>
+</div>
 
-## Project Overview
 
-The OpenHands Agent SDK provides a streamlined framework for creating AI agents that can interact with tools, manage conversations, and integrate with various LLM providers.
+<div align="center">
+  <a href="https://github.com/OpenHands/software-agent-sdk/blob/main/LICENSE"><img src="https://img.shields.io/github/license/OpenHands/software-agent-sdk?style=for-the-badge&color=blue" alt="MIT License"></a>
+  <a href="https://all-hands.dev/joinslack"><img src="https://img.shields.io/badge/Slack-Join%20Us-red?logo=slack&logoColor=white&style=for-the-badge" alt="Join our Slack community"></a>
+  <br>
+  <a href="https://docs.openhands.dev/sdk"><img src="https://img.shields.io/badge/Documentation-000?logo=googledocs&logoColor=FFE165&style=for-the-badge" alt="Check out the documentation"></a>
+  <a href="https://arxiv.org/abs/2511.03690"><img src="https://img.shields.io/badge/Paper-000?logoColor=FFE165&logo=arxiv&style=for-the-badge" alt="Tech Report"></a>
+  <a href="https://docs.google.com/spreadsheets/d/1wOUdFCMyY6Nt0AIqF705KN4JKOWgeI4wUGUP60krXXs/edit?gid=811504672#gid=811504672"><img src="https://img.shields.io/badge/SWEBench-72.8-000?logoColor=FFE165&style=for-the-badge" alt="Benchmark Score"></a>
+  <br>
+  <!-- Keep these links. Translations will automatically update with the README. -->
+  <a href="https://www.readme-i18n.com/OpenHands/software-agent-sdk?lang=de">Deutsch</a> |
+  <a href="https://www.readme-i18n.com/OpenHands/software-agent-sdk?lang=es">Español</a> |
+  <a href="https://www.readme-i18n.com/OpenHands/software-agent-sdk?lang=fr">français</a> |
+  <a href="https://www.readme-i18n.com/OpenHands/software-agent-sdk?lang=ja">日本語</a> |
+  <a href="https://www.readme-i18n.com/OpenHands/software-agent-sdk?lang=ko">한국어</a> |
+  <a href="https://www.readme-i18n.com/OpenHands/software-agent-sdk?lang=pt">Português</a> |
+  <a href="https://www.readme-i18n.com/OpenHands/software-agent-sdk?lang=ru">Русский</a> |
+  <a href="https://www.readme-i18n.com/OpenHands/software-agent-sdk?lang=zh">中文</a>
 
-## Repository Structure
+  <hr>
+</div>
 
-```plain
-agent-sdk/
-├── Makefile                            # Build and development commands
-├── pyproject.toml                      # Workspace configuration
-├── uv.lock                             # Dependency lock file
-├── examples/                           # Usage examples
-│   ├── 01_hello_world.py               # Basic agent setup
-│   ├── 02_custom_tools.py              # Custom tool implementation
-│   ├── 03_activate_microagent.py       # Microagent usage
-│   ├── 04_confirmation_mode_example.py # Interactive mode
-│   ├── 05_use_llm_registry.py          # LLM registry usage
-│   ├── 06_interactive_terminal_w_reasoning.py # Terminal interaction with reasoning
-│   ├── 07_mcp_integration.py           # MCP integration
-│   ├── 08_mcp_with_oauth.py            # MCP integration with OAuth
-│   ├── 09_pause_example.py             # Pause and resume agent execution
-│   ├── 10_persistence.py               # Conversation persistence
-│   ├── 11_async.py                     # Async agent usage
-│   ├── 12_custom_secrets.py            # Custom secrets management
-│   ├── 13_get_llm_metrics.py           # LLM metrics and monitoring
-│   ├── 14_context_condenser.py         # Context condensation
-│   └── 15_llm_security_analyzer.py     # LLM security analysis
-├── openhands/              # Main SDK packages
-│   ├── sdk/                # Core SDK functionality
-│   │   ├── agent/          # Agent implementations
-│   │   ├── context/        # Context management system
-│   │   ├── conversation/   # Conversation management
-│   │   ├── event/          # Event system
-│   │   ├── io/             # I/O abstractions
-│   │   ├── llm/            # LLM integration layer
-│   │   ├── mcp/            # Model Context Protocol integration
-│   │   ├── tool/           # Tool system
-│   │   ├── utils/          # Core utilities
-│   │   ├── logger.py       # Logging configuration
-│   │   └── pyproject.toml  # SDK package configuration
-│   └── tools/              # Runtime tool implementations
-│       ├── execute_bash/   # Bash execution tool
-│       ├── str_replace_editor/  # File editing tool
-│       ├── task_tracker/   # Task tracking tool
-│       ├── utils/          # Tool utilities
-│       └── pyproject.toml  # Tools package configuration
-└── tests/                  # Test suites
-    ├── cross/              # Cross-package tests
-    ├── fixtures/           # Test fixtures and data
-    ├── sdk/                # SDK unit tests
-    └── tools/              # Tools unit tests
-```
+The OpenHands SDK allows you to build applications with agents that write software. This SDK also powers [OpenHands](https://github.com/OpenHands/OpenHands), an all-batteries-included coding agent that you can access through a GUI, CLI, or API.
 
-## Installation & Quickstart
+## Features
 
-### Prerequisites
+- **Single Python API**: Unified interface for building coding agents with minimal boilerplate
+- **Pre-defined Tools**: Built-in tools for bash commands, file editing, task tracking, and web browsing
+- **REST-based Agent Server**: Deploy agents as scalable web services with WebSocket support for real-time interactions
 
-- Python 3.12+
-- `uv` package manager (version 0.8.13+)
+## Why OpenHands Agent SDK?
 
-### Setup
+- **Emphasis on coding**: Purpose-built for software development tasks with specialized tools and workflows
+- **State-of-the-Art Performance**: Powered by advanced LLMs and optimized for real-world coding scenarios
+- **Free and Open Source**: MIT licensed with an active community and transparent development
 
-```bash
-# Clone the repository
-git clone https://github.com/All-Hands-AI/agent-sdk.git
-cd agent-sdk
+## Quick Start
 
-# Install dependencies and setup development environment
-make build
-
-# Verify installation
-uv run python examples/01_hello_world.py
-```
-
-### Hello World Example
+Here's what building with the SDK looks like:
 
 ```python
-import os
-from pydantic import SecretStr
-from openhands.sdk import LLM, Agent, Conversation, Message, TextContent
-from openhands.tools import BashTool, FileEditorTool, TaskTrackerTool
+from openhands.sdk import LLM, Conversation
+from openhands.tools.preset.default import get_default_agent
 
-# Configure LLM
-api_key = os.getenv("LITELLM_API_KEY")
-assert api_key is not None, "LITELLM_API_KEY environment variable is not set."
-llm = LLM(
-    model="litellm_proxy/anthropic/claude-sonnet-4-20250514",
-    base_url="https://llm-proxy.eval.all-hands.dev",
-    api_key=SecretStr(api_key),
-)
+# Configure LLM and create agent
+llm = LLM(model="openhands/claude-sonnet-4-5-20250929", api_key='...')
+agent = get_default_agent(llm=llm)
 
-# Setup tools
-cwd = os.getcwd()
-tools = [
-    BashTool.create(working_dir=cwd),
-    FileEditorTool.create(),
-]
-
-# Create agent and conversation
-agent = Agent(llm=llm, tools=tools)
-conversation = Conversation(agent=agent)
-
-# Send message and run
-conversation.send_message(
-    Message(
-        role="user",
-        content=[TextContent(text="Create a Python file that prints 'Hello, World!'")]
-    )
-)
+# Start a conversation
+conversation = Conversation(agent=agent, workspace="/path/to/project")
+conversation.send_message("Write 3 facts about this project into FACTS.txt.")
 conversation.run()
 ```
 
-## Core Concepts
-
-### Agents
-
-Agents are the central orchestrators that coordinate between LLMs and tools:
-
-```python
-from openhands.sdk import Agent, LLM
-from openhands.tools import BashTool, FileEditorTool
-
-agent = Agent(
-    llm=llm,
-    tools=[BashTool.create(), FileEditorTool.create()],
-    # Optional: custom context, microagents, etc.
-)
-```
-
-### LLM Integration
-
-The SDK supports multiple LLM providers through a unified interface:
-
-```python
-from openhands.sdk import LLM, LLMRegistry
-from pydantic import SecretStr
-
-# Direct LLM configuration
-llm = LLM(
-    model="gpt-4",
-    api_key=SecretStr("your-api-key"),
-    base_url="https://api.openai.com/v1"
-)
-
-# Using LLM registry for shared configurations
-registry = LLMRegistry()
-llm = registry.get_llm("default")
-```
-
-### Tools
-
-Tools provide agents with capabilities to interact with the environment:
-
-#### Simplified Pattern (Recommended)
-
-```python
-from openhands.sdk import TextContent, ImageContent
-from openhands.tools import BashTool, FileEditorTool, TaskTrackerTool
-
-# Direct instantiation with simplified API
-tools = [
-    BashTool.create(working_dir=os.getcwd()),
-    FileEditorTool.create(),
-    TaskTrackerTool.create(save_dir=os.getcwd()),
-]
-```
-
-#### Advanced Pattern (For explicitly maintained tool executor)
-
-We explicitly define a `BashExecutor` in this example:
-
-```python
-from openhands.tools import BashExecutor, execute_bash_tool
-
-# Explicit executor creation for reuse or customization
-bash_executor = BashExecutor(working_dir=os.getcwd())
-bash_tool = execute_bash_tool.set_executor(executor=bash_executor)
-```
-
-And we can later re-use this bash terminal instance to define a custom tool:
-
-```python
-from collections.abc import Sequence
-from openhands.sdk.tool import ActionBase, ObservationBase, ToolExecutor
-
-class GrepAction(ActionBase):
-    pattern: str = Field(description="Regex to search for")
-    path: str = Field(
-        default=".", description="Directory to search (absolute or relative)"
-    )
-    include: str | None = Field(
-        default=None, description="Optional glob to filter files (e.g. '*.py')"
-    )
-
-
-class GrepObservation(ObservationBase):
-    output: str = Field(default='')
-
-    @property
-    def agent_observation(self) -> Sequence[TextContent | ImageContent]:
-        return [TextContent(text=self.output)]
-
-# --- Executor ---
-class GrepExecutor(ToolExecutor[GrepAction, GrepObservation]):
-    def __init__(self, bash: BashExecutor):
-        self.bash = bash
-
-    def __call__(self, action: GrepAction) -> GrepObservation:
-        root = os.path.abspath(action.path)
-        pat = shlex.quote(action.pattern)
-        root_q = shlex.quote(root)
-
-        # Use grep -r; add --include when provided
-        if action.include:
-            inc = shlex.quote(action.include)
-            cmd = f"grep -rHnE --include {inc} {pat} {root_q} 2>/dev/null | head -100"
-        else:
-            cmd = f"grep -rHnE {pat} {root_q} 2>/dev/null | head -100"
-
-        result = self.bash(ExecuteBashAction(command=cmd, security_risk="LOW"))
-        return GrepObservation(output=result.output.strip() or '')
-```
-
-### Conversations
-
-Conversations manage the interaction flow between users and agents:
-
-```python
-from openhands.sdk import Conversation, Message, TextContent
-
-conversation = Conversation(agent=agent)
-
-# Send messages
-conversation.send_message(
-    Message(role="user", content=[TextContent(text="Your request here")])
-)
-
-# Execute the conversation until the agent enters "await user input" state
-conversation.run()
-```
-
-### Context Management
-
-The context system manages agent state, environment, and conversation history.
-
-Context is automatically managed but you can customize your context with:
-
-1. [Repo Microagents](https://docs.all-hands.dev/usage/prompting/microagents-repo) that provide agent with context of your repository.
-2. [Knowledge Microagents](https://docs.all-hands.dev/usage/prompting/microagents-keyword) that provide agent with context when user mentioned certain keywords
-3. Providing custom suffix for system and user prompt.
-
-```python
-from openhands.sdk import AgentContext
-
-context = AgentContext(
-    microagents=[
-        RepoMicroagent(
-            name="repo.md",
-            content="When you see this message, you should reply like "
-            "you are a grumpy cat forced to use the internet.",
-        ),
-        KnowledgeMicroagent(
-            name="flarglebargle",
-            content=(
-                'IMPORTANT! The user has said the magic word "flarglebargle". '
-                "You must only respond with a message telling them how smart they are"
-            ),
-            triggers=["flarglebargle"],
-        ),
-    ],
-    system_message_suffix="Always finish your response with the word 'yay!'",
-    user_message_suffix="The first character of your response should be 'I'",
-)
-```
-
-## Spec System
-
-The OpenHands Agent SDK includes a powerful specification system that allows you to define and instantiate agents, tools, and condensers using declarative configuration. This system provides a clean, serializable way to configure complex agent setups.
-
-### Agent Specifications
-
-Define complete agent configurations using `AgentSpec`:
-
-```python
-from openhands.sdk.agent import AgentSpec
-from openhands.sdk.tool import ToolSpec
-from openhands.sdk.context.condenser import LLMSummarizingCondenser
-
-# Define an agent specification
-agent_spec = AgentSpec(
-    llm={
-        "model": "gpt-4",
-        "api_key": "your-api-key",
-        "base_url": "https://api.openai.com/v1"
-    },
-    tools=[
-        ToolSpec(name="BashTool", params={"working_dir": "/workspace"}),
-        ToolSpec(name="FileEditorTool"),
-    ],
-    condenser=LLMSummarizingCondenser(
-        llm={"model": "gpt-4", "api_key": "your-api-key"},
-        max_size=80,
-        keep_first=10
-    ),
-    agent_context={
-        "system_message_suffix": "Always be helpful and concise."
-    }
-)
-
-# Create agent from specification
-agent = AgentBase.from_spec(agent_spec)
-```
-
-### Tool Specifications
-
-Configure tools with `ToolSpec`:
-
-```python
-from openhands.sdk.tool import ToolSpec
-
-# Simple tool specification
-bash_spec = ToolSpec(name="BashTool", params={"working_dir": "/app"})
-
-# Tool with complex parameters
-editor_spec = ToolSpec(
-    name="FileEditorTool",
-    params={
-        "max_file_size": 1000000,
-        "allowed_extensions": [".py", ".js", ".md"]
-    }
-)
-```
-
-### Benefits of the Spec System
-
-1. **Serializable Configuration**: Specs can be easily serialized to/from JSON, YAML, or other formats
-2. **Validation**: Built-in validation ensures configurations are correct before instantiation
-3. **Reusability**: Share and reuse agent configurations across different environments
-4. **Version Control**: Track agent configurations alongside your code
-5. **Dynamic Loading**: Load agent configurations from external sources at runtime
-
-### Example: Configuration File
-
-```python
-import json
-from openhands.sdk.agent import AgentSpec, AgentBase
-
-# Save configuration to file
-config = {
-    "llm": {"model": "gpt-4", "api_key": "your-key"},
-    "tools": [
-        {"name": "BashTool", "params": {"working_dir": "/workspace"}},
-        {"name": "FileEditorTool"}
-    ]
-}
-
-with open("agent_config.json", "w") as f:
-    json.dump(config, f)
-
-# Load and create agent from file
-with open("agent_config.json", "r") as f:
-    config = json.load(f)
-
-agent_spec = AgentSpec(**config)
-agent = AgentBase.from_spec(agent_spec)
-```
+For installation instructions and detailed setup, see the [Getting Started Guide](https://docs.openhands.dev/sdk/getting-started).
 
 ## Documentation
 
-For detailed documentation and examples, refer to the `examples/` directory which contains comprehensive usage examples covering all major features of the SDK.
+For detailed documentation, tutorials, and API reference, visit:
 
-## Development Workflow
+**[https://docs.openhands.dev/sdk](https://docs.openhands.dev/sdk)**
 
-### Environment Setup
+The documentation includes:
+- [Getting Started Guide](https://docs.openhands.dev/sdk/getting-started) - Installation and setup
+- [Architecture & Core Concepts](https://docs.openhands.dev/sdk/arch/overview) - Agents, tools, workspaces, and more
+- [Guides](https://docs.openhands.dev/sdk/guides/hello-world) - Hello World, custom tools, MCP, skills, and more
+- [API Reference](https://docs.openhands.dev/sdk/guides/agent-server/api-reference/server-details/alive) - Agent Server REST API documentation
 
-```bash
-# Initial setup
-make build
+## Examples
 
-# Install additional dependencies
-# add `--dev` if you want to install 
-uv add package-name
+The `examples/` directory contains comprehensive usage examples:
 
-# Update dependencies
-uv sync
+- **Standalone SDK** (`examples/01_standalone_sdk/`) - Basic agent usage, custom tools, and microagents
+- **Remote Agent Server** (`examples/02_remote_agent_server/`) - Client-server architecture and WebSocket connections
+- **GitHub Workflows** (`examples/03_github_workflows/`) - CI/CD integration and automated workflows
+
+## Contributing
+
+For development setup, testing, and contribution guidelines, see [DEVELOPMENT.md](DEVELOPMENT.md).
+
+## Community
+
+- [Join Slack](https://openhands.dev/joinslack) - Connect with the OpenHands community
+- [GitHub Repository](https://github.com/OpenHands/agent-sdk) - Source code and issues
+- [Documentation](https://docs.openhands.dev/sdk) - Complete documentation
+
+## Cite
+
 ```
-
-### Code Quality
-
-The project enforces strict code quality standards:
-
-```bash
-# Format code
-make format
-
-# Lint code
-make lint
-
-# Run pre-commit hooks
-uv run pre-commit run --all-files
-
-# Type checking (included in pre-commit)
-uv run pyright
-```
-
-### Testing
-
-```bash
-# Run all tests
-uv run pytest
-
-# Run specific test suite
-uv run pytest tests/cross/
-uv run pytest tests/sdk/
-uv run pytest tests/tools/
-
-# Run with coverage
-uv run pytest --cov=openhands --cov-report=html
-```
-
-### Pre-commit Workflow
-
-Before every commit:
-
-```bash
-# Run on specific files
-uv run pre-commit run --files path/to/file.py
-
-# Run on all files
-uv run pre-commit run --all-files
+@misc{wang2025openhandssoftwareagentsdk,
+      title={The OpenHands Software Agent SDK: A Composable and Extensible Foundation for Production Agents}, 
+      author={Xingyao Wang and Simon Rosenberg and Juan Michelini and Calvin Smith and Hoang Tran and Engel Nyst and Rohit Malhotra and Xuhui Zhou and Valerie Chen and Robert Brennan and Graham Neubig},
+      year={2025},
+      eprint={2511.03690},
+      archivePrefix={arXiv},
+      primaryClass={cs.SE},
+      url={https://arxiv.org/abs/2511.03690}, 
+}
 ```

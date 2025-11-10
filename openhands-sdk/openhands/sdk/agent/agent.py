@@ -4,6 +4,7 @@ from pydantic import ValidationError
 
 import openhands.sdk.security.risk as risk
 from openhands.sdk.agent.base import AgentBase
+from openhands.sdk.agent.utils import fix_malformed_tool_arguments
 from openhands.sdk.context.view import View
 from openhands.sdk.conversation import (
     ConversationCallbackType,
@@ -45,7 +46,11 @@ from openhands.sdk.tool import (
     Action,
     Observation,
 )
-from openhands.sdk.tool.builtins import FinishAction, ThinkAction
+from openhands.sdk.tool.builtins import (
+    FinishAction,
+    FinishTool,
+    ThinkAction,
+)
 
 
 logger = get_logger(__name__)
@@ -62,7 +67,7 @@ class Agent(AgentBase):
     Example:
         >>> from openhands.sdk import LLM, Agent, Tool
         >>> llm = LLM(model="claude-sonnet-4-20250514", api_key=SecretStr("key"))
-        >>> tools = [Tool(name="BashTool"), Tool(name="FileEditorTool")]
+        >>> tools = [Tool(name="TerminalTool"), Tool(name="FileEditorTool")]
         >>> agent = Agent(llm=llm, tools=tools)
     """
 
@@ -171,13 +176,13 @@ class Agent(AgentBase):
                     include=None,
                     store=False,
                     add_security_risk_prediction=self._add_security_risk_prediction,
-                    metadata=self.llm.metadata,
+                    extra_body=self.llm.litellm_extra_body,
                 )
             else:
                 llm_response = self.llm.completion(
                     messages=_messages,
                     tools=list(self.tools_map.values()),
-                    extra_body={"metadata": self.llm.metadata},
+                    extra_body=self.llm.litellm_extra_body,
                     add_security_risk_prediction=self._add_security_risk_prediction,
                 )
         except FunctionCallValidationError as e:
@@ -304,9 +309,9 @@ class Agent(AgentBase):
         tool_call: MessageToolCall,
         llm_response_id: str,
         on_event: ConversationCallbackType,
-        thought: list[TextContent] = [],
+        thought: list[TextContent] | None = None,
         reasoning_content: str | None = None,
-        thinking_blocks: list[ThinkingBlock | RedactedThinkingBlock] = [],
+        thinking_blocks: list[ThinkingBlock | RedactedThinkingBlock] | None = None,
         responses_reasoning_item: ReasoningItemModel | None = None,
     ) -> ActionEvent | None:
         """Converts a tool call into an ActionEvent, validating arguments.
@@ -323,9 +328,9 @@ class Agent(AgentBase):
             # Persist assistant function_call so next turn has matching call_id
             tc_event = ActionEvent(
                 source="agent",
-                thought=thought,
+                thought=thought or [],
                 reasoning_content=reasoning_content,
-                thinking_blocks=thinking_blocks,
+                thinking_blocks=thinking_blocks or [],
                 responses_reasoning_item=responses_reasoning_item,
                 tool_call=tool_call,
                 tool_name=tool_call.name,
@@ -346,6 +351,9 @@ class Agent(AgentBase):
         security_risk: risk.SecurityRisk = risk.SecurityRisk.UNKNOWN
         try:
             arguments = json.loads(tool_call.arguments)
+
+            # Fix malformed arguments (e.g., JSON strings for list/dict fields)
+            arguments = fix_malformed_tool_arguments(arguments, tool.action_type)
 
             # if the tool has a security_risk field (when security analyzer is set),
             # pop it out as it's not part of the tool's action schema
@@ -372,9 +380,9 @@ class Agent(AgentBase):
             # Persist assistant function_call so next turn has matching call_id
             tc_event = ActionEvent(
                 source="agent",
-                thought=thought,
+                thought=thought or [],
                 reasoning_content=reasoning_content,
-                thinking_blocks=thinking_blocks,
+                thinking_blocks=thinking_blocks or [],
                 responses_reasoning_item=responses_reasoning_item,
                 tool_call=tool_call,
                 tool_name=tool_call.name,
@@ -393,9 +401,9 @@ class Agent(AgentBase):
 
         action_event = ActionEvent(
             action=action,
-            thought=thought,
+            thought=thought or [],
             reasoning_content=reasoning_content,
-            thinking_blocks=thinking_blocks,
+            thinking_blocks=thinking_blocks or [],
             responses_reasoning_item=responses_reasoning_item,
             tool_name=tool.name,
             tool_call_id=tool_call.id,
@@ -447,6 +455,6 @@ class Agent(AgentBase):
         on_event(obs_event)
 
         # Set conversation state
-        if tool.name == "finish":
+        if tool.name == FinishTool.name:
             state.execution_status = ConversationExecutionStatus.FINISHED
         return obs_event

@@ -5,6 +5,7 @@ Tests the core behavior: pause action execution for user confirmation.
 """
 
 from collections.abc import Sequence
+from typing import ClassVar
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -79,11 +80,12 @@ class ConfirmationTestTool(
 ):
     """Concrete tool for confirmation mode testing."""
 
+    name: ClassVar[str] = "test_tool"
+
     @classmethod
     def create(cls, conv_state=None, **params) -> Sequence["ConfirmationTestTool"]:
         return [
             cls(
-                name="test_tool",
                 description="A test tool",
                 action_type=MockConfirmationModeAction,
                 observation_type=MockConfirmationModeObservation,
@@ -550,7 +552,8 @@ class TestConfirmationMode:
             e for e in self.conversation.state.events if isinstance(e, ObservationEvent)
         ]
         assert len(obs_events) == 1
-        assert obs_events[0].observation.message == "Task completed successfully!"  # type: ignore[attr-defined]
+        # FinishObservation should contain the finish message in content
+        assert obs_events[0].observation.text == "Task completed successfully!"
 
     def test_think_and_finish_action_skips_confirmation_entirely(self):
         """First step: ThinkAction (skips confirmation). Second step: FinishAction."""
@@ -592,13 +595,13 @@ class TestConfirmationMode:
         ]
         assert len(obs_events) == 2
 
-        # 1) ThinkAction observation
+        # 1) ThinkAction observation - should contain the standard message
         assert hasattr(obs_events[0].observation, "content")
-        assert obs_events[0].observation.content == "Your thought has been logged."  # type: ignore[attr-defined]
+        assert obs_events[0].observation.text == "Your thought has been logged."
 
-        # 2) FinishAction observation
-        assert hasattr(obs_events[1].observation, "message")
-        assert obs_events[1].observation.message == "Analysis complete"  # type: ignore[attr-defined]
+        # 2) FinishAction observation - should contain the finish message
+        assert hasattr(obs_events[1].observation, "content")
+        assert obs_events[1].observation.text == "Analysis complete"
 
     def test_pause_during_confirmation_preserves_waiting_status(self):
         """Test that pausing during WAITING_FOR_CONFIRMATION preserves the status.

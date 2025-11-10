@@ -37,12 +37,14 @@ class ACPAgent(AgentBase):
     to provide AI agent capabilities. It translates OpenHands SDK conversation
     states into ACP protocol messages and vice versa.
 
+    Note:
+        ACP servers manage their own LLM configuration internally, so the `llm`
+        parameter is optional and not used by the ACP protocol. It's only kept
+        for compatibility with AgentBase.
+
     Example:
-        >>> from openhands.sdk import LLM, Conversation, Tool
         >>> from openhands.sdk.agent import ACPAgent
-        >>> llm = LLM(model="claude-sonnet-4-20250514", api_key="key")
         >>> agent = ACPAgent(
-        ...     llm=llm,
         ...     acp_command=["npx", "-y", "claude-code-acp"],
         ...     acp_args=[]
         ... )
@@ -55,6 +57,14 @@ class ACPAgent(AgentBase):
         Many advanced SDK features (like microagents, custom tools, security
         analyzers) are not yet supported and will raise NotImplementedError.
     """
+
+    llm: Any = Field(  # type: ignore[assignment]
+        default=None,
+        description=(
+            "LLM configuration (not used by ACP - ACP servers manage their "
+            "own LLM). Kept for AgentBase compatibility."
+        ),
+    )
 
     acp_command: list[str] = Field(
         ...,

@@ -6,52 +6,43 @@ This example shows how to use ACPAgent to interact with ACP servers
 
 Prerequisites:
     - An ACP server command available (e.g., npx -y claude-code-acp)
-    - API keys for the ACP server if required
+    - API keys for the ACP server if required (managed by the ACP server)
 
 Note:
-    This is a minimal implementation. Many advanced SDK features
-    (microagents, custom tools, security analyzers) are not yet supported.
+    - ACPAgent does NOT require an LLM parameter - the ACP server manages its own LLM
+    - This is a minimal implementation. Many advanced SDK features
+      (microagents, custom tools, security analyzers) are not yet supported.
 """
 
 import os
 
-from openhands.sdk import LLM, Conversation
 from openhands.sdk.agent import ACPAgent
+from openhands.sdk.conversation import LocalConversation
 from openhands.sdk.event import MessageEvent
 
-
-# Create an LLM configuration (required by AgentBase but not used by ACP server)
-# The actual LLM is managed by the ACP server
-llm = LLM(
-    model="anthropic/claude-sonnet-4-5-20250929",
-    api_key=os.getenv("LLM_API_KEY", "not-used-by-acp"),
-)
 
 # Create an ACPAgent that connects to an ACP server
 # Example 1: Using Claude-Code ACP server (requires claude-code-acp to be available)
 agent = ACPAgent(
-    llm=llm,
     acp_command=["npx", "-y", "claude-code-acp"],
     acp_args=[],  # Add any additional arguments for the ACP server
 )
 
 # Example 2: Using a local ACP server script
 # agent = ACPAgent(
-#     llm=llm,
 #     acp_command=["python", "/path/to/your/acp_server.py"],
 #     acp_args=["--verbose"],
 # )
 
 # Example 3: Using Gemini CLI ACP server (hypothetical)
 # agent = ACPAgent(
-#     llm=llm,
 #     acp_command=["gemini-cli-acp"],
-#     acp_args=["--api-key", os.getenv("GEMINI_API_KEY")],
+#     acp_args=[],
 # )
 
 # Create a conversation with the agent
 cwd = os.getcwd()
-conversation = Conversation(agent=agent, workspace=cwd)
+conversation = LocalConversation(agent=agent, workspace=cwd)
 
 # Send a message to the agent
 print("Sending message to ACP agent...")

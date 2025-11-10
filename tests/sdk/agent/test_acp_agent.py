@@ -5,27 +5,23 @@ from unittest.mock import Mock, patch
 import pytest
 
 from openhands.sdk.agent.acp_agent import ACPAgent
-from openhands.sdk.llm import LLM
 from openhands.sdk.tool.spec import Tool
 
 
 def test_acp_agent_initialization():
-    """Test that ACPAgent can be initialized with required parameters."""
-    llm = LLM(model="test-model")
+    """Test that ACPAgent can be initialized without LLM."""
     agent = ACPAgent(
-        llm=llm,
         acp_command=["echo", "test"],
     )
     assert agent.acp_command == ["echo", "test"]
     assert agent.acp_args == []
     assert agent.acp_cwd is None
+    assert agent.llm is None
 
 
 def test_acp_agent_with_args():
     """Test ACPAgent initialization with additional arguments."""
-    llm = LLM(model="test-model")
     agent = ACPAgent(
-        llm=llm,
         acp_command=["python", "-m", "acp_server"],
         acp_args=["--verbose"],
         acp_cwd="/tmp/test",
@@ -33,15 +29,14 @@ def test_acp_agent_with_args():
     assert agent.acp_command == ["python", "-m", "acp_server"]
     assert agent.acp_args == ["--verbose"]
     assert agent.acp_cwd == "/tmp/test"
+    assert agent.llm is None
 
 
 def test_acp_agent_rejects_tools():
     """Test that ACPAgent raises error when tools are provided."""
     from openhands.sdk.conversation.state import ConversationState
 
-    llm = LLM(model="test-model")
     agent = ACPAgent(
-        llm=llm,
         acp_command=["test"],
         tools=[Tool(name="test_tool")],
     )
@@ -57,9 +52,7 @@ def test_acp_agent_rejects_mcp_config():
     """Test that ACPAgent raises error when MCP config is provided."""
     from openhands.sdk.conversation.state import ConversationState
 
-    llm = LLM(model="test-model")
     agent = ACPAgent(
-        llm=llm,
         acp_command=["test"],
         mcp_config={"test": "config"},
     )
@@ -72,9 +65,7 @@ def test_acp_agent_rejects_mcp_config():
 @patch("subprocess.Popen")
 def test_acp_agent_start_server(mock_popen):
     """Test that ACP server can be started."""
-    llm = LLM(model="test-model")
     agent = ACPAgent(
-        llm=llm,
         acp_command=["python", "-m", "acp_server"],
     )
 

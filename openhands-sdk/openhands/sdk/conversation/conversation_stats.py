@@ -93,6 +93,10 @@ class ConversationStats(BaseModel):
         """
         self._on_stats_change = callback
 
+        # Wire up the callback to all already-registered metrics
+        for metrics in self.usage_to_metrics.values():
+            metrics.set_on_change(callback)
+
     def register_llm(self, event: RegistryEvent):
         # Listen for LLM creations and track their metrics
         llm = event.llm
@@ -113,7 +117,11 @@ class ConversationStats(BaseModel):
             self.usage_to_metrics[usage_id] = llm.metrics
             stats_changed = True
 
-        # Notify of stats change if callback is set
+        # Set up callback on the metrics object to get notified of updates
+        if llm.metrics and self._on_stats_change is not None:
+            llm.metrics.set_on_change(self._on_stats_change)
+
+        # Notify of stats change if callback is set and stats changed
         if stats_changed and self._on_stats_change is not None:
             try:
                 self._on_stats_change()

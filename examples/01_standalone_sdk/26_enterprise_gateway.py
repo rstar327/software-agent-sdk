@@ -12,8 +12,9 @@ from datetime import datetime
 
 from pydantic import SecretStr
 
-from openhands.sdk import Agent, Conversation, MessageEvent
-from openhands.sdk.llm import LLM, content_to_str
+from openhands.sdk import Conversation
+from openhands.sdk.llm import LLM
+from openhands.tools.preset.default import get_default_agent
 
 
 def build_gateway_llm() -> LLM:
@@ -30,7 +31,8 @@ def build_gateway_llm() -> LLM:
         base_url=os.getenv(
             "LLM_BASE_URL", "https://your-corporate-proxy.company.com/api/llm"
         ),
-        # an api_key input is always required but is unused when api keys are passed via extra headers
+        # an api_key input is always required but is unused when api keys
+        # are passed via extra headers
         api_key=SecretStr(os.getenv("LLM_API_KEY", "placeholder")),
         custom_llm_provider=os.getenv("LLM_CUSTOM_LLM_PROVIDER", "openai"),
         ssl_verify=ssl_verify,
@@ -58,19 +60,15 @@ if __name__ == "__main__":
     llm = build_gateway_llm()
 
     # Create agent and conversation
-    agent = Agent(llm=llm, cli_mode=True)
+    agent = get_default_agent(llm=llm, cli_mode=True)
     conversation = Conversation(
         agent=agent,
         workspace=os.getcwd(),
-        visualize=False,
     )
 
-    try:
-        # Send a message to test the enterprise gateway configuration
-        conversation.send_message(
-            "Analyze this codebase and create 3 facts about the current project into FACTS.txt. Do not write code."
-        )
-        conversation.run()
-
-    finally:
-        conversation.close()
+    # Send a message to test the enterprise gateway configuration
+    conversation.send_message(
+        "Analyze this codebase and create 3 facts about the current "
+        "project into FACTS.txt. Do not write code."
+    )
+    conversation.run()

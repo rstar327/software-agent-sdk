@@ -10,9 +10,7 @@ We integrated an ApplyPatch tool modeled after OpenAI's cookbook for GPT-5.1 "se
 
 ## Key decisions
 
-- ToolDefinition.to_responses_tool returns a minimal schema:
-  - 
-  - Accept both `patch` and `patch_text` via Pydantic aliasing; serialize as `patch`.
+- ToolDefinition.to_responses_tool returns a minimal schema for the canonical `patch` argument.
 - Example targets `openai/gpt-5.1-codex-mini` and uses the OPENAI_API_KEY from env.
 
 ## Responses pipeline adjustments

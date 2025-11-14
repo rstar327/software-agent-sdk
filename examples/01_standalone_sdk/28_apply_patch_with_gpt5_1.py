@@ -18,7 +18,10 @@ from pydantic import SecretStr
 from openhands.sdk import LLM, Agent, Conversation, get_logger
 from openhands.sdk.tool import Tool
 from openhands.tools.apply_patch import ApplyPatchTool
-from openhands.tools.preset.default import register_default_tools
+from openhands.tools.task_tracker import TaskTrackerTool
+
+# from openhands.tools.preset.default import register_default_tools
+from openhands.tools.terminal import TerminalTool
 
 
 logger = get_logger(__name__)
@@ -46,8 +49,9 @@ llm = LLM(
     log_completions=True,  # enable telemetry to log input/output payloads
 )
 
-# Ensure default tools are registered (terminal/task_tracker)
-register_default_tools(enable_browser=False)
+# Explicitly register tool classes so Tool(name=...) can resolve
+# They self-register into the global registry on import
+_ = (TerminalTool, TaskTrackerTool, ApplyPatchTool)
 
 # Add our new ApplyPatchTool by name
 additional_tools = [Tool(name=ApplyPatchTool.name)]
@@ -55,9 +59,8 @@ additional_tools = [Tool(name=ApplyPatchTool.name)]
 agent = Agent(
     llm=llm,
     tools=[
-        # Keep terminal + task tracker, and our ApplyPatch (replace FileEditor)
-        Tool(name="terminal"),  # TerminalTool.name resolves to "terminal"
-        Tool(name="task_tracker"),  # TaskTrackerTool
+        Tool(name="terminal"),
+        Tool(name="task_tracker"),
         *additional_tools,
     ],
     system_prompt_kwargs={"cli_mode": True},

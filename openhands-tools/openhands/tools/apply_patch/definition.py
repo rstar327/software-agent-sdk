@@ -121,8 +121,19 @@ class ApplyPatchTool(ToolDefinition[ApplyPatchAction, ApplyPatchObservation]):
         add_security_risk_prediction: bool = False,  # noqa: ARG002 - signature match
         action_type: type | None = None,  # noqa: ARG002 - signature match
     ) -> FunctionToolParam:  # type: ignore[override]
-        # Minimal spec: name only; let OpenAI server resolve params/description
-        return {"type": "function", "name": self.name}  # type: ignore[return-value]
+        # Prefer server-known tool (name-only). However, some providers may
+        # require an argument schema to avoid empty-args calls. Provide a
+        # minimal parameters schema for 'patch' to guide the model.
+        return {
+            "type": "function",
+            "name": self.name,
+            "parameters": {
+                "type": "object",
+                "properties": {"patch": {"type": "string"}},
+                "required": ["patch"],
+            },
+            "strict": False,
+        }  # type: ignore[return-value]
 
 
 register_tool(ApplyPatchTool.name, ApplyPatchTool)

@@ -466,9 +466,11 @@ class Message(BaseModel):
             # Do not echo back prior turn's reasoning item. The Responses API
             # does not require sending these back, and including them can cause
             # validation constraints (ordering requirements).
-            # Do NOT emit assistant function_call items in input.
-            # The server already has the assistant tool calls from its previous
-            # output; the client should only send function_call_output items.
+            # Emit assistant function_call items; the client will also send
+            # the corresponding function_call_output items in the same request.
+            if self.tool_calls:
+                for tc in self.tool_calls:
+                    items.append(tc.to_responses_dict())
             return items
 
         if self.role == "tool":

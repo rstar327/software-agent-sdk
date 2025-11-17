@@ -1,3 +1,4 @@
+import inspect
 import logging
 import re
 from collections.abc import Callable
@@ -56,11 +57,21 @@ DEFAULT_HIGHLIGHT_REGEX = {
 class EventVisualizationConfig(BaseModel):
     """Configuration for how to visualize an event type."""
 
-    title: str | Callable[[Event], str]
-    """The title to display for this event. Can be a string or callable."""
+    title: str | Callable[[Event], str] | Callable[[Event, str | None], str]
+    """The title to display for this event. Can be a string or callable.
+    
+    The callable can accept either:
+    - `Callable[[Event], str]` - for simple title generation
+    - `Callable[[Event, str | None], str]` - for title generation with agent name support
+    """
 
-    color: str | Callable[[Event], str]
-    """The Rich color to use for the title and rule. Can be a string or callable."""
+    color: str | Callable[[Event], str] | Callable[[Event, str | None], str]
+    """The Rich color to use for the title and rule. Can be a string or callable.
+    
+    The callable can accept either:
+    - `Callable[[Event], str]` - for simple color generation
+    - `Callable[[Event, str | None], str]` - for color generation with agent name support
+    """
 
     show_metrics: bool = False
     """Whether to show the metrics subtitle."""
@@ -72,6 +83,33 @@ class EventVisualizationConfig(BaseModel):
     """If True, skip visualization of this event type entirely."""
 
     model_config = {"arbitrary_types_allowed": True}
+
+
+def _call_with_optional_name(
+    func: Callable, event: Event, name: str | None = None
+) -> str:
+    """Call a function with event and optionally name, based on its signature.
+    
+    This helper checks the function signature and calls it with the appropriate
+    arguments for backward compatibility.
+    
+    Args:
+        func: The callable to invoke (either accepts Event or Event + name)
+        event: The event to pass
+        name: Optional agent name to pass if the callable accepts it
+        
+    Returns:
+        The result from calling the function
+    """
+    sig = inspect.signature(func)
+    param_count = len(sig.parameters)
+    
+    # If function accepts 2+ parameters, pass both event and name
+    if param_count >= 2:
+        return func(event, name)
+    # Otherwise, only pass event
+    else:
+        return func(event)
 
 
 def indent_content(content: Text, spaces: int = 4) -> Text:
@@ -220,11 +258,13 @@ class DefaultConversationVisualizer(ConversationVisualizerBase):
     _console: Console
     _skip_user_messages: bool
     _highlight_patterns: dict[str, str]
+    _name: str | None
 
     def __init__(
         self,
         highlight_regex: dict[str, str] | None = DEFAULT_HIGHLIGHT_REGEX,
         skip_user_messages: bool = False,
+        name: str | None = None,
     ):
         """Initialize the visualizer.
 
@@ -235,11 +275,15 @@ class DefaultConversationVisualizer(ConversationVisualizerBase):
                            "Thought:": "bold green"}
             skip_user_messages: If True, skip displaying user messages. Useful for
                                 scenarios where user input is not relevant to show.
+            name: Optional agent name to pass to title/color callables that support it.
+                  Useful for multi-agent scenarios where you want to display which
+                  agent is performing actions.
         """
         super().__init__()
         self._console = Console()
         self._skip_user_messages = skip_user_messages
         self._highlight_patterns = highlight_regex or {}
+        self._name = name
 
     def on_event(self, event: Event) -> None:
         """Main event handler that displays events with Rich formatting."""
@@ -307,10 +351,16 @@ class DefaultConversationVisualizer(ConversationVisualizerBase):
             content = self._apply_highlighting(content)
 
         # Resolve title (may be a string or callable)
-        title = config.title(event) if callable(config.title) else config.title
+        if callable(config.title):
+            title = _call_with_optional_name(config.title, event, self._name)
+        else:
+            title = config.title
 
         # Resolve color (may be a string or callable)
-        title_color = config.color(event) if callable(config.color) else config.color
+        if callable(config.color):
+            title_color = _call_with_optional_name(config.color, event, self._name)
+        else:
+            title_color = config.color
 
         # Build subtitle if needed
         subtitle = self._format_metrics_subtitle() if config.show_metrics else None

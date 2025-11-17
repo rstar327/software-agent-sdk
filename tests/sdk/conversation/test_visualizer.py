@@ -451,3 +451,108 @@ def test_visualizer_conversation_state_update_event_skipped():
     block = visualizer._create_event_block(event)
     # Should return None to skip visualization
     assert block is None
+
+
+def test_visualizer_with_agent_name():
+    """Test that visualizer can pass agent name to title callables."""
+    from openhands.sdk.conversation.visualizer.default import (
+        EVENT_VISUALIZATION_CONFIG,
+        EventVisualizationConfig,
+    )
+    from openhands.sdk.event.base import Event
+
+    # Create a custom title callable that uses the agent name
+    def custom_title_with_name(event: Event, name: str | None) -> str:
+        if name:
+            return f"Action by {name}"
+        return "Action"
+
+    # Create a mock event type
+    class CustomEvent(Event):
+        source: str = "agent"
+        
+        @property
+        def visualize(self) -> Text:
+            """Return simple visualization for testing."""
+            return Text("Test event content")
+
+    # Register a config with the name-aware callable
+    EVENT_VISUALIZATION_CONFIG[CustomEvent] = EventVisualizationConfig(
+        title=custom_title_with_name,
+        color="blue",
+    )
+
+    try:
+        # Test with agent name
+        visualizer_with_name = DefaultConversationVisualizer(name="TestAgent")
+        event = CustomEvent()
+        block = visualizer_with_name._create_event_block(event)
+
+        assert block is not None
+        # Get the Rule (first renderable) which contains the title
+        from rich.rule import Rule
+        rule = block.renderables[0]
+        assert isinstance(rule, Rule)
+        # Check the title attribute
+        assert "Action by TestAgent" in str(rule.title)
+
+        # Test without agent name
+        visualizer_without_name = DefaultConversationVisualizer()
+        block = visualizer_without_name._create_event_block(event)
+
+        assert block is not None
+        rule = block.renderables[0]
+        assert isinstance(rule, Rule)
+        # Should use fallback title without name  
+        title_str = str(rule.title)
+        # Should be just "Action", not "Action by TestAgent"
+        assert "Action" in title_str
+        assert "TestAgent" not in title_str
+    finally:
+        # Clean up the custom config
+        del EVENT_VISUALIZATION_CONFIG[CustomEvent]
+
+
+def test_visualizer_backward_compatibility():
+    """Test that visualizer works with callables that don't accept name parameter."""
+    from openhands.sdk.conversation.visualizer.default import (
+        EVENT_VISUALIZATION_CONFIG,
+        EventVisualizationConfig,
+    )
+    from openhands.sdk.event.base import Event
+
+    # Create a title callable that only accepts event (old signature)
+    def old_style_title(event: Event) -> str:
+        return "Old Style Title"
+
+    # Create a mock event type
+    class LegacyEvent(Event):
+        source: str = "agent"
+        
+        @property
+        def visualize(self) -> Text:
+            """Return simple visualization for testing."""
+            return Text("Legacy event content")
+
+    # Register a config with the old-style callable
+    EVENT_VISUALIZATION_CONFIG[LegacyEvent] = EventVisualizationConfig(
+        title=old_style_title,
+        color="green",
+    )
+
+    try:
+        # Test that it works even when visualizer has a name
+        visualizer = DefaultConversationVisualizer(name="TestAgent")
+        event = LegacyEvent()
+        block = visualizer._create_event_block(event)
+
+        assert block is not None
+        # Get the Rule (first renderable) which contains the title
+        from rich.rule import Rule
+        rule = block.renderables[0]
+        assert isinstance(rule, Rule)
+        # Should call the old-style function without error
+        assert "Old Style Title" in str(rule.title)
+    finally:
+        # Clean up the custom config
+        del EVENT_VISUALIZATION_CONFIG[LegacyEvent]

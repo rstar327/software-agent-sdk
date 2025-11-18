@@ -11,12 +11,6 @@ from urllib.request import urlopen
 
 from pydantic import Field, PrivateAttr, model_validator
 
-from openhands.agent_server.docker.build import (
-    BuildOptions,
-    PlatformType,
-    TargetType,
-    build,
-)
 from openhands.sdk.logger import get_logger
 from openhands.sdk.utils.command import execute_command
 from openhands.sdk.workspace import RemoteWorkspace
@@ -59,12 +53,17 @@ def find_available_tcp_port(
 class DockerWorkspace(RemoteWorkspace):
     """Remote workspace that sets up and manages a Docker container.
 
-    This workspace creates a Docker container running the OpenHands agent server,
-    waits for it to become healthy, and then provides remote workspace operations
-    through the container's HTTP API.
+    This workspace creates a Docker container running a pre-built OpenHands agent
+    server image, waits for it to become healthy, and then provides remote workspace
+    operations through the container's HTTP API.
+
+    Note: This class only works with pre-built images. To build images on-the-fly
+    from a base image, use DockerDevWorkspace instead.
 
     Example:
-        with DockerWorkspace(base_image="python:3.12") as workspace:
+        with DockerWorkspace(
+            server_image="ghcr.io/openhands/agent-server:latest"
+        ) as workspace:
             result = workspace.execute_command("ls -la")
     """
 
@@ -79,17 +78,9 @@ class DockerWorkspace(RemoteWorkspace):
     )
 
     # Docker-specific configuration
-    base_image: str | None = Field(
-        default=None,
-        description="Base Docker image to use for the agent server container. "
-        "Mutually exclusive with server_image.",
-    )
     server_image: str | None = Field(
         default=None,
-        description=(
-            "Pre-built agent server image to use. If None, builds from base_image."
-            "Mutually exclusive with base_image."
-        ),
+        description="Pre-built agent server image to use.",
     )
     host_port: int | None = Field(
         default=None,
@@ -106,10 +97,7 @@ class DockerWorkspace(RemoteWorkspace):
     detach_logs: bool = Field(
         default=True, description="Whether to stream Docker logs in background."
     )
-    target: TargetType = Field(
-        default="source", description="Build target for the Docker image."
-    )
-    platform: PlatformType = Field(
+    platform: str = Field(
         default="linux/amd64", description="Platform for the Docker image."
     )
     extra_ports: bool = Field(
@@ -124,15 +112,12 @@ class DockerWorkspace(RemoteWorkspace):
     _container_id: str | None = PrivateAttr(default=None)
     _logs_thread: threading.Thread | None = PrivateAttr(default=None)
     _stop_logs: threading.Event = PrivateAttr(default_factory=threading.Event)
-    _image: str = PrivateAttr()
 
     @model_validator(mode="after")
-    def _validate_images(self):
-        """Ensure exactly one of base_image or server_image is provided; cache it."""
-        if (self.base_image is None) == (self.server_image is None):
-            raise ValueError(
-                "Exactly one of 'base_image' or 'server_image' must be set."
-            )
+    def _validate_server_image(self):
+        """Ensure server_image is provided."""
+        if self.server_image is None:
+            raise ValueError("server_image must be provided")
         return self
 
     def model_post_init(self, context: Any) -> None:
@@ -164,28 +149,9 @@ class DockerWorkspace(RemoteWorkspace):
                 "Docker Desktop/daemon."
             )
 
-        # Build image if needed
-
-        if self.base_image:
-            if "ghcr.io/openhands/agent-server" in self.base_image:
-                raise RuntimeError(
-                    "base_image cannot be a pre-built agent-server image. "
-                    "Use server_image=... instead."
-                )
-            build_opts = BuildOptions(
-                base_image=self.base_image,
-                target=self.target,
-                platforms=[self.platform],
-                push=False,
-            )
-            tags = build(opts=build_opts)
-            assert tags and len(tags) > 0, "Build failed, no image tags returned"
-            self._image = tags[0]
-
-        elif self.server_image:
-            self._image = self.server_image
-        else:
-            raise RuntimeError("Unreachable: one of base_image or server_image is set")
+        # Use the provided server image
+        assert self.server_image is not None, "server_image should be validated"
+        image = self.server_image
 
         # Prepare Docker run flags
         flags: list[str] = []
@@ -227,7 +193,7 @@ class DockerWorkspace(RemoteWorkspace):
             "--name",
             f"agent-server-{uuid.uuid4()}",
             *flags,
-            self._image,
+            image,
             "--host",
             "0.0.0.0",
             "--port",

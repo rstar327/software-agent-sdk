@@ -149,6 +149,10 @@ class Telemetry(BaseModel):
         if p_details is not None:
             cache_read = int(getattr(p_details, "cached_tokens", 0) or 0)
 
+        # Kimi-K2-thinking populate usage.cached_tokens field
+        if not cache_read and hasattr(usage, "cached_tokens"):
+            cache_read = int(getattr(usage, "cached_tokens", 0) or 0)
+
         reasoning_tokens = 0
         c_details = getattr(usage, "completion_tokens_details", None) or getattr(
             usage, "output_tokens_details", None
@@ -293,8 +297,8 @@ class Telemetry(BaseModel):
                 and "tools" in data["kwargs"]
             ):
                 data["kwargs"].pop("tools")
-            with open(fname, "w") as f:
-                f.write(json.dumps(data, default=_safe_json))
+            with open(fname, "w", encoding="utf-8") as f:
+                f.write(json.dumps(data, default=_safe_json, ensure_ascii=False))
         except Exception as e:
             warnings.warn(f"Telemetry logging failed: {e}")
 

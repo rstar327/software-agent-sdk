@@ -28,6 +28,7 @@ from openhands.sdk.llm import LLM, Message, TextContent
 from openhands.sdk.llm.llm_registry import LLMRegistry
 from openhands.sdk.logger import get_logger
 from openhands.sdk.observability.laminar import observe
+from openhands.sdk.security.analyzer import SecurityAnalyzerBase
 from openhands.sdk.security.confirmation_policy import (
     ConfirmationPolicyBase,
 )
@@ -51,8 +52,8 @@ class LocalConversation(BaseConversation):
     def __init__(
         self,
         agent: AgentBase,
-        workspace: str | LocalWorkspace,
-        persistence_dir: str | None = None,
+        workspace: str | Path | LocalWorkspace,
+        persistence_dir: str | Path | None = None,
         conversation_id: ConversationID | None = None,
         callbacks: list[ConversationCallbackType] | None = None,
         max_iteration_per_run: int = 500,
@@ -67,8 +68,10 @@ class LocalConversation(BaseConversation):
 
         Args:
             agent: The agent to use for the conversation
-            workspace: Working directory for agent operations and tool execution
-            persistence_dir: Directory for persisting conversation state and events
+            workspace: Working directory for agent operations and tool execution.
+                Can be a string path, Path object, or LocalWorkspace instance.
+            persistence_dir: Directory for persisting conversation state and events.
+                Can be a string path or Path object.
             conversation_id: Optional ID for the conversation. If provided, will
                       be used to identify the conversation. The user might want to
                       suffix their persistent filestore with this ID.
@@ -87,14 +90,16 @@ class LocalConversation(BaseConversation):
         self._cleanup_initiated = False
 
         self.agent = agent
-        if isinstance(workspace, str):
+        if isinstance(workspace, (str, Path)):
+            # LocalWorkspace accepts both str and Path via BeforeValidator
             workspace = LocalWorkspace(working_dir=workspace)
         assert isinstance(workspace, LocalWorkspace), (
             "workspace must be a LocalWorkspace instance"
         )
         self.workspace = workspace
-        if not Path(self.workspace.working_dir).exists():
-            Path(self.workspace.working_dir).mkdir(parents=True, exist_ok=True)
+        ws_path = Path(self.workspace.working_dir)
+        if not ws_path.exists():
+            ws_path.mkdir(parents=True, exist_ok=True)
 
         # Create-or-resume: factory inspects BASE_STATE to decide
         desired_id = conversation_id or uuid.uuid4()
@@ -185,12 +190,16 @@ class LocalConversation(BaseConversation):
         return self._stuck_detector
 
     @observe(name="conversation.send_message")
-    def send_message(self, message: str | Message) -> None:
+    def send_message(self, message: str | Message, sender: str | None = None) -> None:
         """Send a message to the agent.
 
         Args:
             message: Either a string (which will be converted to a user message)
                     or a Message object
+            sender: Optional identifier of the sender. Can be used to track
+                   message origin in multi-agent scenarios. For example, when
+                   one agent delegates to another, the sender can be set to
+                   identify which agent is sending the message.
         """
         # Convert string to Message if needed
         if isinstance(message, str):
@@ -233,6 +242,7 @@ class LocalConversation(BaseConversation):
                 llm_message=message,
                 activated_skills=activated_skill_names,
                 extended_content=extended_content,
+                sender=sender,
             )
             self._on_event(user_msg_event)
 
@@ -402,6 +412,11 @@ class LocalConversation(BaseConversation):
         secret_registry = self._state.secret_registry
         secret_registry.update_secrets(secrets)
         logger.info(f"Added {len(secrets)} secrets to conversation")
+
+    def set_security_analyzer(self, analyzer: SecurityAnalyzerBase | None) -> None:
+        """Set the security analyzer for the conversation."""
+        with self._state:
+            self._state.security_analyzer = analyzer
 
     def close(self) -> None:
         """Close the conversation and clean up all tool executors."""

@@ -115,13 +115,52 @@ class DockerWorkspace(RemoteWorkspace):
 
     @model_validator(mode="after")
     def _validate_server_image(self):
-        """Ensure server_image is provided."""
+        """Ensure server_image is provided, unless subclass will provide it."""
+        # Allow subclasses to defer server_image validation if they have base_image
+        # Check if this is a subclass with base_image attribute
+        if (
+            type(self).__name__ != "DockerWorkspace"
+            and hasattr(self, "base_image")
+            and getattr(self, "base_image") is not None
+        ):
+            # This is a subclass (e.g., DockerDevWorkspace) that will provide
+            # server_image in model_post_init
+            return self
         if self.server_image is None:
             raise ValueError("server_image must be provided")
         return self
 
     def model_post_init(self, context: Any) -> None:
         """Set up the Docker container and initialize the remote workspace."""
+        # Subclasses should call _get_image() to get the image to use
+        # This allows them to build or prepare the image before container startup
+        image = self._get_image()
+        self._start_container(image, context)
+
+    def _get_image(self) -> str:
+        """Get the Docker image to use for the container.
+
+        Subclasses can override this to provide custom image resolution logic
+        (e.g., building images on-the-fly).
+
+        Returns:
+            The Docker image tag to use.
+        """
+        if self.server_image is None:
+            raise ValueError("server_image must be set")
+        return self.server_image
+
+    def _start_container(self, image: str, context: Any) -> None:
+        """Start the Docker container with the given image.
+
+        This method handles all container lifecycle: port allocation, Docker
+        validation, container creation, health checks, and RemoteWorkspace
+        initialization.
+
+        Args:
+            image: The Docker image tag to use.
+            context: The Pydantic context from model_post_init.
+        """
         # Determine port
         if self.host_port is None:
             self.host_port = find_available_tcp_port()
@@ -148,10 +187,6 @@ class DockerWorkspace(RemoteWorkspace):
                 "Docker is not available. Please install and start "
                 "Docker Desktop/daemon."
             )
-
-        # Use the provided server image
-        assert self.server_image is not None, "server_image should be validated"
-        image = self.server_image
 
         # Prepare Docker run flags
         flags: list[str] = []

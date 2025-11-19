@@ -1,6 +1,6 @@
 """Docker development workspace with on-the-fly image building capability."""
 
-from typing import Any
+from typing import Literal
 
 from pydantic import Field, model_validator
 
@@ -48,6 +48,15 @@ class DockerDevWorkspace(DockerWorkspace):
         default="source", description="Build target for the Docker image."
     )
 
+    # Override platform with stricter type for building
+    platform: Literal["linux/amd64", "linux/arm64"] = Field(  # type: ignore[assignment]
+        default="linux/amd64",
+        description=(
+            "Platform for the Docker image. "
+            "Only linux/amd64 and linux/arm64 are supported for building."
+        ),
+    )
+
     @model_validator(mode="after")
     def _validate_images(self):
         """Ensure exactly one of base_image or server_image is provided."""
@@ -62,27 +71,29 @@ class DockerDevWorkspace(DockerWorkspace):
             )
         return self
 
-    def model_post_init(self, context: Any) -> None:
-        """Build image if needed, then initialize the Docker container."""
-        # If base_image is provided, build it first
+    def _get_image(self) -> str:
+        """Build the image if base_image is provided, otherwise use server_image.
+
+        This overrides the parent method to add on-the-fly image building
+        capability.
+
+        Returns:
+            The Docker image tag to use.
+        """
         if self.base_image:
-            # Validate platform is a valid build platform
-            if self.platform not in ("linux/amd64", "linux/arm64"):
-                raise ValueError(
-                    f"Platform {self.platform} is not valid for building. "
-                    "Must be 'linux/amd64' or 'linux/arm64'."
-                )
+            # Build the image from base_image
             build_opts = BuildOptions(
                 base_image=self.base_image,
                 target=self.target,
-                platforms=[self.platform],  # type: ignore[list-item]
+                platforms=[self.platform],
                 push=False,
             )
             tags = build(opts=build_opts)
             if not tags or len(tags) == 0:
                 raise RuntimeError("Build failed, no image tags returned")
-            # Override server_image with the built image
-            object.__setattr__(self, "server_image", tags[0])
-
-        # Now call parent's model_post_init which will use server_image
-        super().model_post_init(context)
+            return tags[0]
+        elif self.server_image:
+            # Use pre-built image
+            return self.server_image
+        else:
+            raise ValueError("Either base_image or server_image must be set")

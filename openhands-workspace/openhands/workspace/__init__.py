@@ -2,6 +2,8 @@
 
 from typing import TYPE_CHECKING
 
+from openhands.sdk.workspace import PlatformType, TargetType
+
 from .docker import DockerWorkspace
 from .remote_api import APIRemoteWorkspace
 
@@ -10,9 +12,11 @@ if TYPE_CHECKING:
     from .docker import DockerDevWorkspace
 
 __all__ = [
-    "DockerWorkspace",
-    "DockerDevWorkspace",
     "APIRemoteWorkspace",
+    "DockerDevWorkspace",
+    "DockerWorkspace",
+    "PlatformType",
+    "TargetType",
 ]
 
 

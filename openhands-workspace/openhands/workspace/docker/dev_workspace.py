@@ -1,14 +1,9 @@
 """Docker development workspace with on-the-fly image building capability."""
 
-from typing import Literal
-
 from pydantic import Field, model_validator
 
-from openhands.agent_server.docker.build import (
-    BuildOptions,
-    TargetType,
-    build,
-)
+from openhands.agent_server.docker.build import BuildOptions, build
+from openhands.sdk.workspace import PlatformType, TargetType
 
 from .workspace import DockerWorkspace
 
@@ -49,7 +44,7 @@ class DockerDevWorkspace(DockerWorkspace):
     )
 
     # Override platform with stricter type for building
-    platform: Literal["linux/amd64", "linux/arm64"] = Field(  # type: ignore[assignment]
+    platform: PlatformType = Field(  # type: ignore[assignment]
         default="linux/amd64",
         description=(
             "Platform for the Docker image. "

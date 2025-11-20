@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import TYPE_CHECKING, Self, overload
 
 from openhands.sdk.agent.base import AgentBase
@@ -48,8 +49,8 @@ class Conversation:
         cls: type[Self],
         agent: AgentBase,
         *,
-        workspace: str | LocalWorkspace = "workspace/project",
-        persistence_dir: str | None = None,
+        workspace: str | Path | LocalWorkspace = "workspace/project",
+        persistence_dir: str | Path | None = None,
         conversation_id: ConversationID | None = None,
         callbacks: list[ConversationCallbackType] | None = None,
         token_callbacks: list[ConversationTokenCallbackType] | None = None,
@@ -82,8 +83,8 @@ class Conversation:
         cls: type[Self],
         agent: AgentBase,
         *,
-        workspace: str | LocalWorkspace | RemoteWorkspace = "workspace/project",
-        persistence_dir: str | None = None,
+        workspace: str | Path | LocalWorkspace | RemoteWorkspace = "workspace/project",
+        persistence_dir: str | Path | None = None,
         conversation_id: ConversationID | None = None,
         callbacks: list[ConversationCallbackType] | None = None,
         token_callbacks: list[ConversationTokenCallbackType] | None = None,

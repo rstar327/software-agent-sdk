@@ -3,7 +3,7 @@ from collections.abc import Sequence
 
 import requests
 from litellm import ChatCompletionToolParam
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, PrivateAttr, field_validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 from transformers import AutoTokenizer
 
@@ -73,8 +73,8 @@ class CriticClient(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="ignore")
 
     # --- connection / model config ---
-    server_url: HttpUrl = Field(
-        default=HttpUrl("https://all-hands-ai--critic-qwen3-4b-serve.modal.run"),
+    server_url: str = Field(
+        default="https://all-hands-ai--critic-qwen3-4b-serve.modal.run",
         description="Base URL of the vLLM classification service",
     )
     api_key: str = Field(
@@ -88,13 +88,13 @@ class CriticClient(BaseModel):
         description="Name of the tokenizer to use",
     )
     pass_tools_definitions: bool = Field(
-        default=False, description="Whether to pass tool definitions to the model"
+        default=True, description="Whether to pass tool definitions to the model"
     )
     timeout_seconds: float = Field(
         default=60.0, description="Timeout for requests to the model"
     )
     has_success_label: bool = Field(
-        default=False, description="Whether the model predicts success label at index 0"
+        default=True, description="Whether the model predicts success label at index 0"
     )
 
     # --- runtime fields ---

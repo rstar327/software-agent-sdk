@@ -26,11 +26,13 @@ logger = get_logger(__name__)
 api_key = os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY")
 assert api_key, "Set LLM_API_KEY or OPENAI_API_KEY in your environment."
 
-model = "openai/gpt-5.1-codex-mini"  # Use direct OpenAI; Responses-capable
+model = "openhands/gpt-5-mini-2025-08-07"  # Use a model that supports Responses API
+base_url = os.getenv("LLM_BASE_URL")
 
 llm = LLM(
     model=model,
     api_key=SecretStr(api_key),
+    base_url=base_url,
     # Responses-path options
     reasoning_effort="high",
     # Logging / behavior tweaks

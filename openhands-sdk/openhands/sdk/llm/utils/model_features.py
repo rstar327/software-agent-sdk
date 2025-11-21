@@ -74,6 +74,8 @@ PROMPT_CACHE_PATTERNS: list[str] = [
 PROMPT_CACHE_RETENTION_PATTERNS: list[str] = [
     # OpenAI GPT-5+ family
     "gpt-5",
+    # GPT-4.1 too
+    "gpt-4.1",
 ]
 
 SUPPORTS_STOP_WORDS_FALSE_PATTERNS: list[str] = [

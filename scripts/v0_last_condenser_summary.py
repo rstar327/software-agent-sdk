@@ -73,6 +73,7 @@ class ConversationEvents:
     identifier: str
     path: Path
     events: list[dict[str, Any]]
+    condensation_args: dict[str, Any] | None = None
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -150,7 +151,10 @@ def load_events(conversation_path: Path, max_size: int = 250) -> ConversationEve
     recent_events.reverse()
 
     return ConversationEvents(
-        identifier=identifier, path=conversation_path, events=recent_events
+        identifier=identifier,
+        path=conversation_path,
+        events=recent_events,
+        condensation_args=last_condensation_args,
     )
 
 
@@ -192,12 +196,14 @@ def build_payload(conv: ConversationEvents) -> dict[str, Any]:
     if not conv.events:
         raise RuntimeError("No events found in conversation")
 
-    last_idx = find_last_condensation_event_index(conv.events)
+    # Prefer the condensation metadata we captured during load_events, since
+    # the condensation event itself may lie outside the bounded tail.
+    args = conv.condensation_args
 
     # If there is no condensation event, fall back to treating the entire
-    # event history as "recent". This still gives the V1 agent something
-    # usable, just without a prior summary.
-    if last_idx is None:
+    # (bounded) event history as "recent". This still gives the V1 agent
+    # something usable, just without a prior summary.
+    if args is None:
         return {
             "identifier": conv.identifier,
             "conversation_path": str(conv.path),
@@ -212,28 +218,20 @@ def build_payload(conv: ConversationEvents) -> dict[str, Any]:
             "recent_events": conv.events,
         }
 
-    condensation_event = conv.events[last_idx]
-    args = extract_condensation_args(condensation_event)
-    assert args is not None  # for type checkers
-
     forgotten_start_id = args["forgotten_events_start_id"]
     forgotten_end_id = args["forgotten_events_end_id"]
-
-    # At this point `conv.events` already contains just the recent tail loaded
-    # by `load_events`, in ascending order. We don't need to re-scan ids here;
-    # we simply propagate the condenser metadata plus that tail.
 
     return {
         "identifier": conv.identifier,
         "conversation_path": str(conv.path),
         "total_events": len(conv.events),
-        "last_condensation_event_index": last_idx,
+        "last_condensation_event_index": None,
         "forgotten_events_start_id": int(forgotten_start_id),
         "forgotten_events_end_id": int(forgotten_end_id),
         "forgotten_until_index": None,
         "summary": args.get("summary"),
         "summary_offset": args.get("summary_offset"),
-        "condensation_event": condensation_event,
+        "condensation_event": None,
         "recent_events": conv.events,
     }
 
@@ -272,12 +270,6 @@ def format_bootstrap_prompt(payload: dict[str, Any]) -> str:
         prompt_lines.append("<V0_CONDENSER_SUMMARY>")
         prompt_lines.append(summary.strip())
         prompt_lines.append("</V0_CONDENSER_SUMMARY>")
-        prompt_lines.append("")
-    else:
-        prompt_lines.append(
-            "No prior condensation summary was found. The following events "
-            "represent the full available history of the V0 conversation."
-        )
         prompt_lines.append("")
 
     prompt_lines.append(

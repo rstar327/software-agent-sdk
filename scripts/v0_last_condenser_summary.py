@@ -139,7 +139,12 @@ def build_payload(conv: ConversationEvents) -> dict[str, Any]:
 
     last_idx = find_last_condensation_event_index(conv.events)
     if last_idx is None:
-        raise RuntimeError("No condensation events (CondensationAction) found")
+        raise SystemExit(
+            "No condensation events (CondensationAction) found in this conversation.\n"
+            "This likely means the V0 run never triggered memory condensation.\n"
+            "You can still migrate manually by summarizing the history yourself,\n"
+            "or by re-running the task and ensuring condensation is enabled."
+        )
 
     condensation_event = conv.events[last_idx]
     args = extract_condensation_args(condensation_event)

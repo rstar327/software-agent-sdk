@@ -39,7 +39,7 @@ import os
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 
 ENV_ROOT = os.getenv("OPENHANDS_CONVERSATIONS_ROOT")
@@ -98,10 +98,12 @@ def load_events(conversation_path: Path) -> ConversationEvents:
             return False, str(ts)
 
     events.sort(key=sort_key)
-    return ConversationEvents(identifier=identifier, path=conversation_path, events=events)
+    return ConversationEvents(
+        identifier=identifier, path=conversation_path, events=events
+    )
 
 
-def extract_condensation_args(ev: dict[str, Any]) -> Optional[dict[str, Any]]:
+def extract_condensation_args(ev: dict[str, Any]) -> dict[str, Any] | None:
     """Return action.args if this looks like a CondensationAction event.
 
     We don't try to fully reconstruct the V0 action model; we only care that
@@ -123,8 +125,8 @@ def extract_condensation_args(ev: dict[str, Any]) -> Optional[dict[str, Any]]:
     return args
 
 
-def find_last_condensation_event_index(events: list[dict[str, Any]]) -> Optional[int]:
-    last_idx: Optional[int] = None
+def find_last_condensation_event_index(events: list[dict[str, Any]]) -> int | None:
+    last_idx: int | None = None
     for idx, ev in enumerate(events):
         if extract_condensation_args(ev) is not None:
             last_idx = idx
@@ -155,7 +157,9 @@ def build_payload(conv: ConversationEvents) -> dict[str, Any]:
             id_to_index[ev_id] = idx
 
     if not id_to_index:
-        raise RuntimeError("No event IDs found in conversation; cannot align with condensation range")
+        raise RuntimeError(
+            "No event IDs found in conversation; cannot align with condensation range"
+        )
 
     # We only really need the end index to know what was summarized.
     end_index = id_to_index.get(int(forgotten_end_id))
@@ -203,7 +207,8 @@ def format_bootstrap_prompt(payload: dict[str, Any]) -> str:
 
     prompt_lines.append(f"Conversation ID (V0): {identifier}")
     prompt_lines.append(
-        "All events with id <= " f"{forgotten_end_id} have been summarized into the "
+        "All events with id <= "
+        f"{forgotten_end_id} have been summarized into the "
         "following text. Assume that summary accurately reflects everything that "
         "happened earlier in the project."
     )

@@ -216,6 +216,17 @@ class Agent(AgentBase):
         # LLMResponse already contains the converted message and metrics snapshot
         message: Message = llm_response.message
 
+        # Check if this is a reasoning-only response (e.g., from reasoning models)
+        # or a message-only response without tool calls
+        has_reasoning = (
+            message.responses_reasoning_item is not None
+            or message.reasoning_content is not None
+            or (message.thinking_blocks and len(message.thinking_blocks) > 0)
+        )
+        has_content = any(
+            isinstance(c, TextContent) and c.text.strip() for c in message.content
+        )
+
         if message.tool_calls and len(message.tool_calls) > 0:
             if not all(isinstance(c, TextContent) for c in message.content):
                 logger.warning(
@@ -254,32 +265,18 @@ class Agent(AgentBase):
 
             if action_events:
                 self._execute_actions(conversation, action_events, on_event)
+            return
 
-        else:
-            # Check if this is a reasoning-only response (e.g., from reasoning models)
-            # If so, don't finish - let the agent continue to generate tool calls
-            has_reasoning = (
-                message.responses_reasoning_item is not None
-                or message.reasoning_content is not None
-                or (message.thinking_blocks and len(message.thinking_blocks) > 0)
-            )
+        # No tool calls - emit message event for reasoning or content responses
+        if not has_reasoning and not has_content:
+            logger.warning("LLM produced empty response - continuing agent loop")
 
-            # Check if there's actual text content
-            has_content = any(
-                isinstance(c, TextContent) and c.text.strip() for c in message.content
-            )
-
-            # Log warning if there's no tool calls, reasoning, or content
-            if not has_reasoning and not has_content:
-                logger.warning("LLM produced empty response - continuing agent loop")
-
-            # Always emit the message event and continue the loop
-            msg_event = MessageEvent(
-                source="agent",
-                llm_message=message,
-                llm_response_id=llm_response.id,
-            )
-            on_event(msg_event)
+        msg_event = MessageEvent(
+            source="agent",
+            llm_message=message,
+            llm_response_id=llm_response.id,
+        )
+        on_event(msg_event)
 
         # If using VLLM, we can get the raw prompt and response tokens
         # that can be useful for RL training.

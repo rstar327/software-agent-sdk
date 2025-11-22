@@ -120,6 +120,14 @@ class LLM(BaseModel, RetryMixin, NonNativeToolCallingMixin):
         >>> # Use with agent or conversation
     """
 
+    def is_gpt5_family(self) -> bool:
+        """Return True if the configured model belongs to the GPT-5 family.
+
+        This relies on the convention that GPT-5 models always contain
+        the substring "gpt-5" in their model name.
+        """
+        return "gpt-5" in self.model
+
     # =========================================================================
     # Config fields
     # =========================================================================

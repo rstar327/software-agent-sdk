@@ -110,11 +110,12 @@ def test_fuzz_matching_trailing_spaces(tmp_ws: Path):
 
 
 def test_delete_missing_file_expected_differror(tmp_ws: Path):
-    """Idealized behavior: delete of missing file surfaces as DiffError.
+    """Delete of a missing file should surface as a structured DiffError.
 
-    This currently FAILS: process_patch/load_files calls open() first, so the
-    real behavior is a FileNotFoundError bubbled from open(), not a DiffError
-    from the parser. We keep this test only to document the desired behavior.
+    The reference implementation would bubble a FileNotFoundError from
+    load_files/open_fn; our SDK adapts this by converting it into a
+    "Delete File Error: Missing File" DiffError so the tool can return a
+    clean error observation instead of crashing.
     """
     patch = "*** Begin Patch\n*** Delete File: missing.txt\n*** End Patch"
     obs = run_exec(tmp_ws, patch)

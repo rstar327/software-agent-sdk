@@ -421,9 +421,22 @@ class DiffError(ValueError):
 
 
 def load_files(paths: list[str], open_fn: Callable[[str], str]) -> dict[str, str]:
-    orig = {}
+    """Load original file contents used as the patch base.
+
+    This wraps the reference implementation's behavior from the OpenAI
+    cookbook apply_patch.py, but converts missing files into DiffError so
+    callers can surface a structured tool error instead of FileNotFoundError.
+    See:
+    https://github.com/openai/openai-cookbook/blob/main/examples/gpt-5/apply_patch.py
+    """
+    orig: dict[str, str] = {}
     for path in paths:
-        orig[path] = open_fn(path)
+        try:
+            orig[path] = open_fn(path)
+        except (
+            FileNotFoundError
+        ) as exc:  # pragma: no cover - exercised via higher-level tests
+            raise DiffError(f"Delete File Error: Missing File: {path}") from exc
     return orig
 
 

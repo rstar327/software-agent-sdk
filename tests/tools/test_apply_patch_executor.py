@@ -109,6 +109,20 @@ def test_fuzz_matching_trailing_spaces(tmp_ws: Path):
     assert fp.read_text() == "a\ncontext line   \nEND\n"
 
 
+def test_delete_missing_file_expected_differror(tmp_ws: Path):
+    """Idealized behavior: delete of missing file surfaces as DiffError.
+
+    This currently FAILS: process_patch/load_files calls open() first, so the
+    real behavior is a FileNotFoundError bubbled from open(), not a DiffError
+    from the parser. We keep this test only to document the desired behavior.
+    """
+    patch = "*** Begin Patch\n*** Delete File: missing.txt\n*** End Patch"
+    obs = run_exec(tmp_ws, patch)
+    # Intentionally assert the idealized behavior we *would* like to see.
+    assert obs.is_error
+    assert "Missing File" in obs.text
+
+
 def test_duplicate_add_file_error(tmp_ws: Path):
     patch = (
         "*** Begin Patch\n"

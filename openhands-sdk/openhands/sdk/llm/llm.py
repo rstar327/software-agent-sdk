@@ -878,7 +878,16 @@ class LLM(BaseModel, RetryMixin, NonNativeToolCallingMixin):
         return get_features(self.model).supports_responses_api
 
     def is_gpt5_family(self) -> bool:
-        """Return True if the configured model belongs to the GPT-5 family."""
+        """Return True if the configured model belongs to the GPT-5 family.
+
+        Notes:
+            - This helper and its surrounding behaviors are exercised and validated
+              on GPT-5 chat-style models (e.g., ``gpt-5-mini``), not specifically
+              on GPT-5 Codex variants.
+            - GPT-5 Codex models may have different prompting or tool-usage
+              expectations; see the GPT-5 Codex prompting guide for details:
+              https://cookbook.openai.com/examples/gpt-5-codex_prompting_guide
+        """
         return "gpt-5" in self.model
 
     @property

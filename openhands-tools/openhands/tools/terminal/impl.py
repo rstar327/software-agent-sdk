@@ -193,13 +193,6 @@ class TerminalExecutor(ToolExecutor[TerminalAction, TerminalObservation]):
             except Exception:
                 pass
 
-        # Set full_output_save_dir if not already set
-        if observation.full_output_save_dir is None and self.full_output_save_dir:
-            data = observation.model_dump(exclude={"full_output_save_dir"})
-            return TerminalObservation.from_text(
-                **data, full_output_save_dir=self.full_output_save_dir
-            )
-
         return observation
 
     def close(self) -> None:

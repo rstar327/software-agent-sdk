@@ -44,6 +44,9 @@ env:
     MAX_BUILD_WORKERS: '32'
     EVAL_AGENT_IMAGE: ghcr.io/openhands/eval-agent-server
     EVAL_AGENT_TARGET: source-minimal
+    # Polling configuration for workflow status checks
+    MAX_POLL_ATTEMPTS: '40'  # 40 attempts × 30s = 20 minutes max wait
+    POLL_INTERVAL_SECONDS: '30'
 
 jobs:
     build-and-evaluate:
@@ -220,8 +223,8 @@ jobs:
                   set -euo pipefail
                   WORKFLOW_ID="${{ env.BENCHMARKS_BUILD_WORKFLOW }}"
                   REPO="${{ env.BENCHMARKS_REPO }}"
-                  MAX_ATTEMPTS=40
-                  SLEEP_SECONDS=30
+                  MAX_ATTEMPTS="${{ env.MAX_POLL_ATTEMPTS }}"
+                  SLEEP_SECONDS="${{ env.POLL_INTERVAL_SECONDS }}"
 
                   # Find the run that was created after our dispatch
                   echo "Looking for workflow run created after $DISPATCH_TIME"

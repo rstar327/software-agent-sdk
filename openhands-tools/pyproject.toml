@@ -14,6 +14,7 @@ dependencies = [
     "browser-use>=0.8.0",
     "func-timeout>=4.3.5",
     "tom-swe>=1.0.1",
+    "py-key-value-aio[disk]>=0.2.8",
 ]
 
 [build-system]

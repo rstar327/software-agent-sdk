@@ -115,18 +115,8 @@ class DockerWorkspace(RemoteWorkspace):
 
     @model_validator(mode="after")
     def _validate_server_image(self):
-        """Ensure server_image is provided, unless subclass will provide it."""
-        # Allow subclasses to defer server_image validation if they have base_image
-        # Check if this is a subclass with base_image attribute
-        if (
-            type(self).__name__ != "DockerWorkspace"
-            and hasattr(self, "base_image")
-            and getattr(self, "base_image") is not None
-        ):
-            # This is a subclass (e.g., DockerDevWorkspace) that will provide
-            # server_image in model_post_init
-            return self
-        if self.server_image is None:
+        """Ensure server_image is set when using DockerWorkspace directly."""
+        if self.__class__ is DockerWorkspace and self.server_image is None:
             raise ValueError("server_image must be provided")
         return self
 

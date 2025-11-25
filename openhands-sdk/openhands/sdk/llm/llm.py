@@ -29,10 +29,6 @@ from openhands.sdk.utils.pydantic_secrets import serialize_secret, validate_secr
 if TYPE_CHECKING:  # type hints only, avoid runtime import cycle
     from openhands.sdk.tool.tool import ToolDefinition
 
-from openhands.sdk.utils.deprecation import (
-    deprecated,
-    warn_deprecated,
-)
 from openhands.sdk.utils.pydantic_diff import pretty_pydantic_diff
 
 
@@ -366,16 +362,6 @@ class LLM(BaseModel, RetryMixin, NonNativeToolCallingMixin):
             return data
         d = dict(data)
 
-        if "service_id" in d and "usage_id" not in d:
-            warn_deprecated(
-                "LLM.service_id",
-                deprecated_in="1.1.0",
-                removed_in="1.3.0",
-                details=SERVICE_ID_DEPRECATION_DETAILS,
-                stacklevel=3,
-            )
-            d["usage_id"] = d.pop("service_id")
-
         model_val = d.get("model")
         if not model_val:
             raise ValueError("model must be specified in LLM")
@@ -457,24 +443,6 @@ class LLM(BaseModel, RetryMixin, NonNativeToolCallingMixin):
     # Public API
     # =========================================================================
     @property
-    @deprecated(
-        deprecated_in="1.1.0",
-        removed_in="1.3.0",
-        details=SERVICE_ID_DEPRECATION_DETAILS,
-    )
-    def service_id(self) -> str:
-        return self.usage_id
-
-    @service_id.setter
-    @deprecated(
-        deprecated_in="1.1.0",
-        removed_in="1.3.0",
-        details=SERVICE_ID_DEPRECATION_DETAILS,
-    )
-    def service_id(self, value: str) -> None:
-        self.usage_id = value
-
-    @property
     def metrics(self) -> Metrics:
         """Get usage metrics for this LLM instance.
 
@@ -489,6 +457,21 @@ class LLM(BaseModel, RetryMixin, NonNativeToolCallingMixin):
             "Metrics should be initialized after model validation"
         )
         return self._metrics
+
+    @property
+    def telemetry(self) -> Telemetry:
+        """Get telemetry handler for this LLM instance.
+
+        Returns:
+            Telemetry object for managing logging and metrics callbacks.
+
+        Example:
+            >>> llm.telemetry.set_log_completions_callback(my_callback)
+        """
+        assert self._telemetry is not None, (
+            "Telemetry should be initialized after model validation"
+        )
+        return self._telemetry
 
     def restore_metrics(self, metrics: Metrics) -> None:
         # Only used by ConversationStats to seed metrics
@@ -1017,7 +1000,6 @@ class LLM(BaseModel, RetryMixin, NonNativeToolCallingMixin):
                 m in self.model
                 for m in [
                     "claude-3-7-sonnet",
-                    "claude-3.7-sonnet",
                     "claude-sonnet-4",
                     "kimi-k2-thinking",
                 ]

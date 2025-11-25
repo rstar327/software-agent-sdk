@@ -13,7 +13,7 @@ from pydantic import Field, PrivateAttr, model_validator
 
 from openhands.sdk.logger import get_logger
 from openhands.sdk.utils.command import execute_command
-from openhands.sdk.workspace import RemoteWorkspace
+from openhands.sdk.workspace import PlatformType, RemoteWorkspace
 
 
 logger = get_logger(__name__)
@@ -97,7 +97,7 @@ class DockerWorkspace(RemoteWorkspace):
     detach_logs: bool = Field(
         default=True, description="Whether to stream Docker logs in background."
     )
-    platform: str = Field(
+    platform: PlatformType = Field(
         default="linux/amd64", description="Platform for the Docker image."
     )
     extra_ports: bool = Field(

@@ -3,7 +3,7 @@
 from pydantic import Field, model_validator
 
 from openhands.agent_server.docker.build import BuildOptions, build
-from openhands.sdk.workspace import PlatformType, TargetType
+from openhands.sdk.workspace import TargetType
 
 from .workspace import DockerWorkspace
 
@@ -41,15 +41,6 @@ class DockerDevWorkspace(DockerWorkspace):
     # Add build-specific options
     target: TargetType = Field(
         default="source", description="Build target for the Docker image."
-    )
-
-    # Override platform with stricter type for building
-    platform: PlatformType = Field(  # type: ignore[assignment]
-        default="linux/amd64",
-        description=(
-            "Platform for the Docker image. "
-            "Only linux/amd64 and linux/arm64 are supported for building."
-        ),
     )
 
     @model_validator(mode="after")

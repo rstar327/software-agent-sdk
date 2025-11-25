@@ -22,6 +22,7 @@ from openhands.sdk import (
     get_logger,
 )
 from openhands.sdk.conversation.streaming_visualizer import create_streaming_visualizer
+from openhands.sdk.conversation.visualizer import DefaultConversationVisualizer
 from openhands.sdk.llm import LLM
 from openhands.tools.preset.default import get_default_agent
 
@@ -60,7 +61,7 @@ def main() -> None:
         model=model,
         api_key=SecretStr(api_key),
         base_url=base_url,
-        service_id="stream-demo",
+        usage_id="stream-demo",
     )
 
     agent = get_default_agent(llm=llm, cli_mode=True)
@@ -90,7 +91,7 @@ def main() -> None:
         workspace=os.getcwd(),
         token_callbacks=[on_token],
         callbacks=callbacks or None,
-        visualize=False,
+        visualizer=None if callbacks else DefaultConversationVisualizer,
     )
 
     story_prompt = (

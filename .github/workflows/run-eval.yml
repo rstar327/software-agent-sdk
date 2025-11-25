@@ -31,6 +31,11 @@ on:
                 description: Reason for manual trigger
                 required: false
                 default: ''
+            eval_branch:
+                description: Evaluation repo branch to use (for testing feature branches)
+                required: false
+                default: main
+                type: string
 
 env:
     EVAL_REPO: OpenHands/evaluation
@@ -174,13 +179,15 @@ jobs:
                   MODELS: ${{ steps.params.outputs.models }}
                   EVAL_REPO: ${{ env.EVAL_REPO }}
                   EVAL_WORKFLOW: ${{ env.EVAL_WORKFLOW }}
+                  EVAL_BRANCH: ${{ github.event.inputs.eval_branch || 'main' }}
               run: |
-                  echo "Dispatching evaluation workflow with SDK commit: $SDK_SHA"
+                  echo "Dispatching evaluation workflow with SDK commit: $SDK_SHA (eval branch: $EVAL_BRANCH)"
                   PAYLOAD=$(jq -n \
                     --arg sdk "$SDK_SHA" \
                     --arg eval_limit "$EVAL_LIMIT" \
                     --arg models "$MODELS" \
-                    '{ref: "main", inputs: {sdk_commit: $sdk, eval_limit: $eval_limit, models: $models}}')
+                    --arg ref "$EVAL_BRANCH" \
+                    '{ref: $ref, inputs: {sdk_commit: $sdk, eval_limit: $eval_limit, models: $models}}')
                   RESPONSE=$(curl -sS -o /tmp/dispatch.out -w "%{http_code}" -X POST \
                     -H "Authorization: token $PAT_TOKEN" \
                     -H "Accept: application/vnd.github+json" \

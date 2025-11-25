@@ -13,7 +13,6 @@ from openhands.sdk.context.prompts.prompt import render_template
 from openhands.sdk.llm import LLM
 from openhands.sdk.logger import get_logger
 from openhands.sdk.mcp import create_mcp_tools
-from openhands.sdk.security import analyzer
 from openhands.sdk.tool import BUILT_IN_TOOLS, Tool, ToolDefinition, resolve_tool
 from openhands.sdk.utils.models import DiscriminatedUnionMixin
 from openhands.sdk.utils.pydantic_diff import pretty_pydantic_diff
@@ -123,12 +122,6 @@ class AgentBase(DiscriminatedUnionMixin, ABC):
         examples=[{"cli_mode": True}],
     )
 
-    security_analyzer: analyzer.SecurityAnalyzerBase | None = Field(
-        default=None,
-        description="Optional security analyzer to evaluate action risks.",
-        examples=[{"kind": "LLMSecurityAnalyzer"}],
-    )
-
     condenser: CondenserBase | None = Field(
         default=None,
         description="Optional condenser to use for condensing conversation history.",
@@ -194,15 +187,6 @@ class AgentBase(DiscriminatedUnionMixin, ABC):
 
     def _initialize(self, state: "ConversationState"):
         """Create an AgentBase instance from an AgentSpec."""
-
-        # 1) Migrate deprecated analyzer → state (if present)
-        if self.security_analyzer and not state.security_analyzer:
-            state.security_analyzer = self.security_analyzer
-            # 2) Clear on the immutable model (allowed via object.__setattr__)
-            try:
-                object.__setattr__(self, "security_analyzer", None)
-            except Exception:
-                logger.warning("Could not clear deprecated Agent.security_analyzer")
 
         if self._tools:
             logger.warning("Agent already initialized; skipping re-initialization.")
@@ -272,8 +256,7 @@ class AgentBase(DiscriminatedUnionMixin, ABC):
     def resolve_diff_from_deserialized(self, persisted: "AgentBase") -> "AgentBase":
         """
         Return a new AgentBase instance equivalent to `persisted` but with
-        explicitly whitelisted fields (e.g. api_key, security_analyzer) taken from
-        `self`.
+        explicitly whitelisted fields (e.g. api_key) taken from `self`.
         """
         if persisted.__class__ is not self.__class__:
             raise ValueError(
@@ -301,9 +284,6 @@ class AgentBase(DiscriminatedUnionMixin, ABC):
                     update={"llm": new_condenser_llm}
                 )
                 updates["condenser"] = new_condenser
-
-        # Allow security_analyzer to differ - use the runtime (self) version
-        updates["security_analyzer"] = self.security_analyzer
 
         # Create maps by tool name for easy lookup
         runtime_tools_map = {tool.name: tool for tool in self.tools}

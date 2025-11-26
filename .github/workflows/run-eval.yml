@@ -281,14 +281,31 @@ jobs:
                   EVAL_REPO: ${{ env.EVAL_REPO }}
                   EVAL_WORKFLOW: ${{ env.EVAL_WORKFLOW }}
                   TRIGGER_REASON: ${{ github.event.inputs.reason }}
+                  EVENT_NAME: ${{ github.event_name }}
+                  PR_NUMBER: ${{ github.event.pull_request.number }}
+                  REPOSITORY: ${{ github.repository }}
               run: |
                   echo "Dispatching evaluation workflow with SDK commit: $SDK_SHA"
+
+                  # Determine PR number for result posting
+                  PR_NUM="${PR_NUMBER}"
+                  if [ "$EVENT_NAME" = "release" ] && [ -z "$PR_NUM" ]; then
+                    # Attempt to find the merged PR for this commit
+                    PR_NUM=$(curl -sS \
+                      -H "Authorization: Bearer $GITHUB_TOKEN" \
+                      -H "Accept: application/vnd.github+json" \
+                      "https://api.github.com/repos/$REPOSITORY/commits/${SDK_SHA}/pulls" \
+                      | jq -r '.[0].number // ""')
+                  fi
+
                   PAYLOAD=$(jq -n \
                     --arg sdk "$SDK_SHA" \
                     --arg eval_limit "$EVAL_LIMIT" \
                     --argjson models "$MODELS_JSON" \
                     --arg reason "$TRIGGER_REASON" \
-                    '{ref: "openhands/improve-eval-workflow", inputs: {sdk_commit: $sdk, eval_limit: $eval_limit, models_json: ($models | tostring), trigger_reason: $reason}}')
+                    --arg pr_number "$PR_NUM" \
+                    --arg repository "$REPOSITORY" \
+                    '{ref: "openhands/improve-eval-workflow", inputs: {sdk_commit: $sdk, eval_limit: $eval_limit, models_json: ($models | tostring), trigger_reason: $reason, pr_number: $pr_number, source_repository: $repository}}')
                   RESPONSE=$(curl -sS -o /tmp/dispatch.out -w "%{http_code}" -X POST \
                     -H "Authorization: token $PAT_TOKEN" \
                     -H "Accept: application/vnd.github+json" \

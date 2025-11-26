@@ -236,11 +236,11 @@ jobs:
                   echo "Looking for workflow run created after $DISPATCH_TIME"
                   RUN_ID=""
                   for i in $(seq 1 $MAX_ATTEMPTS); do
-                    # Query for recent runs on main branch, get more results to avoid race
+                    # Query for recent runs on the feature branch
                     RUNS=$(curl -sS \
                       -H "Authorization: token $PAT_TOKEN" \
                       -H "Accept: application/vnd.github+json" \
-                      "https://api.github.com/repos/${REPO}/actions/workflows/${WORKFLOW_ID}/runs?per_page=5&branch=main&created=>=$DISPATCH_TIME")
+                      "https://api.github.com/repos/${REPO}/actions/workflows/${WORKFLOW_ID}/runs?per_page=5&branch=openhands/improve-eval-workflow&created=>=$DISPATCH_TIME")
 
                     # Find the first run created at or after dispatch time
                     if [ -z "$RUN_ID" ]; then

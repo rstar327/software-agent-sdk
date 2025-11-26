@@ -80,15 +80,13 @@ jobs:
 
             - name: Load model IDs
               id: load-models
+              env:
+                  PYTHONPATH: ${{ github.workspace }}/.github/run-eval
               run: |
                   # Extract model IDs from resolve_model_configs.py
                   python3 - <<'PYEOF' >> "$GITHUB_OUTPUT"
                   import sys
                   import json
-                  import os
-
-                  # Add .github/run-eval to path using absolute path
-                  sys.path.insert(0, os.path.join(os.getcwd(), '.github', 'run-eval'))
 
                   try:
                       from resolve_model_configs import MODELS_CONFIG

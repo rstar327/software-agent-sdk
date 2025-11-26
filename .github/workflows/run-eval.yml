@@ -86,7 +86,7 @@ jobs:
               if: github.event_name == 'pull_request_target' || github.event_name == 'workflow_dispatch'
               run: |
                   ACTOR="${{ github.actor }}"
-                  if ! grep -Fx "$ACTOR" .github/run-eval/authorized-labelers.txt >/dev/null; then
+                  if ! grep -Fx "$ACTOR" .github/run-eval/authorized-actors.txt >/dev/null; then
                     echo "User $ACTOR is not authorized to trigger eval." >&2
                     exit 1
                   fi

@@ -82,23 +82,25 @@ jobs:
               id: load-models
               run: |
                   # Extract model IDs from resolve_model_configs.py
-                  cat > /tmp/extract_models.py <<'PYEOF'
+                  cd "$GITHUB_WORKSPACE"
+                  python3 - <<'PYEOF' >> "$GITHUB_OUTPUT"
                   import sys
-                  sys.path.insert(0, '.github/run-eval')
-                  from resolve_model_configs import MODELS_CONFIG
                   import json
-                  ids = list(MODELS_CONFIG.keys())
-                  print(json.dumps(ids))
+                  sys.path.insert(0, '.github/run-eval')
+                  try:
+                      from resolve_model_configs import MODELS_CONFIG
+                      ids = list(MODELS_CONFIG.keys())
+                      if not ids:
+                          print("ERROR: No models configured", file=sys.stderr)
+                          sys.exit(1)
+                      print(f"allowed_model_ids={json.dumps(ids)}")
+                      print(f"default_model={ids[0]}")
+                  except Exception as e:
+                      print(f"ERROR loading models: {e}", file=sys.stderr)
+                      import traceback
+                      traceback.print_exc()
+                      sys.exit(1)
                   PYEOF
-
-                  ALLOWED_MODEL_IDS=$(python3 /tmp/extract_models.py)
-                  DEFAULT_MODEL=$(echo "$ALLOWED_MODEL_IDS" | jq -r '.[0]')
-                  if [ -z "$DEFAULT_MODEL" ] || [ "$DEFAULT_MODEL" = "null" ]; then
-                    echo "No models configured" >&2
-                    exit 1
-                  fi
-                  echo "allowed_model_ids=$ALLOWED_MODEL_IDS" >> "$GITHUB_OUTPUT"
-                  echo "default_model=$DEFAULT_MODEL" >> "$GITHUB_OUTPUT"
 
             - name: Resolve parameters
               id: params

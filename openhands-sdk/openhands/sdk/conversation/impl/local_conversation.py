@@ -26,11 +26,10 @@ from openhands.sdk.conversation.visualizer import (
 from openhands.sdk.event import (
     MessageEvent,
     PauseEvent,
-    StreamingDeltaEvent,
     UserRejectObservation,
 )
 from openhands.sdk.event.conversation_error import ConversationErrorEvent
-from openhands.sdk.llm import LLM, LLMStreamChunk, Message, TextContent
+from openhands.sdk.llm import LLM, Message, TextContent
 from openhands.sdk.llm.llm_registry import LLMRegistry
 from openhands.sdk.logger import get_logger
 from openhands.sdk.observability.laminar import observe
@@ -50,12 +49,11 @@ class LocalConversation(BaseConversation):
     _state: ConversationState
     _visualizer: ConversationVisualizerBase | None
     _on_event: ConversationCallbackType
+    _on_token: ConversationTokenCallbackType | None
     max_iteration_per_run: int
     _stuck_detector: StuckDetector | None
     llm_registry: LLMRegistry
     _cleanup_initiated: bool
-
-    _on_token: ConversationTokenCallbackType | None
 
     def __init__(
         self,
@@ -151,6 +149,12 @@ class LocalConversation(BaseConversation):
             self._visualizer = None
 
         self._on_event = BaseConversation.compose_callbacks(composed_list)
+        self._on_token = (
+            BaseConversation.compose_callbacks(token_callbacks)
+            if token_callbacks
+            else None
+        )
+
         self.max_iteration_per_run = max_iteration_per_run
 
         # Initialize stuck detector
@@ -164,43 +168,6 @@ class LocalConversation(BaseConversation):
         self.llm_registry.subscribe(self._state.stats.register_llm)
         for llm in list(self.agent.get_all_llms()):
             self.llm_registry.add(llm)
-
-        def _compose_token_callbacks(
-            callbacks: list[ConversationTokenCallbackType],
-        ) -> ConversationTokenCallbackType:
-            def _composed(event):
-                for cb in callbacks:
-                    cb(event)
-
-            return _composed
-
-        user_token_callback = (
-            _compose_token_callbacks(token_callbacks) if token_callbacks else None
-        )
-
-        def _handle_stream_event(stream_chunk: LLMStreamChunk) -> None:
-            try:
-                self._on_event(
-                    StreamingDeltaEvent(source="agent", stream_chunk=stream_chunk)
-                )
-            except Exception:
-                logger.exception("stream_event_processing_error", exc_info=True)
-            if user_token_callback:
-                user_token_callback(stream_chunk)
-
-        streaming_enabled = user_token_callback is not None
-
-        if callbacks:
-            for cb in callbacks:
-                owner = getattr(cb, "__self__", None)
-                if owner is not None and getattr(owner, "requires_streaming", False):
-                    streaming_enabled = True
-                    break
-
-        if self._visualizer and getattr(self._visualizer, "requires_streaming", False):
-            streaming_enabled = True
-
-        self._on_token = _handle_stream_event if streaming_enabled else None
 
         # Initialize secrets if provided
         if secrets:
@@ -350,17 +317,9 @@ class LocalConversation(BaseConversation):
                             ConversationExecutionStatus.RUNNING
                         )
 
-                    if self._on_token is not None:
-                        self.agent.step(
-                            self,
-                            on_event=self._on_event,
-                            on_token=self._on_token,
-                        )
-                    else:
-                        self.agent.step(
-                            self,
-                            on_event=self._on_event,
-                        )
+                    self.agent.step(
+                        self, on_event=self._on_event, on_token=self._on_token
+                    )
                     iteration += 1
 
                     # Check for non-finished terminal conditions

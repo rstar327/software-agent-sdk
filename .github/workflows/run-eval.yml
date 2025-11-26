@@ -36,6 +36,11 @@ on:
                 required: false
                 default: main
                 type: string
+            benchmarks_branch:
+                description: Benchmarks repo branch to use (for testing feature branches)
+                required: false
+                default: main
+                type: string
 
 env:
     EVAL_REPO: OpenHands/evaluation
@@ -187,10 +192,11 @@ jobs:
                   EVAL_REPO: ${{ env.EVAL_REPO }}
                   EVAL_WORKFLOW: ${{ env.EVAL_WORKFLOW }}
                   EVAL_BRANCH: ${{ github.event.inputs.eval_branch || 'main' }}
+                  BENCHMARKS_BRANCH: ${{ github.event.inputs.benchmarks_branch || 'main' }}
                   TRIGGER_REASON: ${{ github.event.inputs.reason }}
                   PR_NUMBER: ${{ steps.params.outputs.pr_number }}
               run: |
-                  echo "Dispatching evaluation workflow with SDK commit: $SDK_SHA (eval branch: $EVAL_BRANCH)"
+                  echo "Dispatching evaluation workflow with SDK commit: $SDK_SHA (eval branch: $EVAL_BRANCH, benchmarks branch: $BENCHMARKS_BRANCH)"
                   PAYLOAD=$(jq -n \
                     --arg sdk "$SDK_SHA" \
                     --arg eval_limit "$EVAL_LIMIT" \
@@ -198,7 +204,8 @@ jobs:
                     --arg ref "$EVAL_BRANCH" \
                     --arg reason "$TRIGGER_REASON" \
                     --arg pr "$PR_NUMBER" \
-                    '{ref: $ref, inputs: {sdk_commit: $sdk, eval_limit: $eval_limit, models_json: ($models | tostring), trigger_reason: $reason, pr_number: $pr}}')
+                    --arg benchmarks "$BENCHMARKS_BRANCH" \
+                    '{ref: $ref, inputs: {sdk_commit: $sdk, eval_limit: $eval_limit, models_json: ($models | tostring), trigger_reason: $reason, pr_number: $pr, benchmarks_branch: $benchmarks}}')
                   RESPONSE=$(curl -sS -o /tmp/dispatch.out -w "%{http_code}" -X POST \
                     -H "Authorization: token $PAT_TOKEN" \
                     -H "Accept: application/vnd.github+json" \

@@ -3,7 +3,6 @@
 Resolve model IDs to full model configurations.
 
 Reads:
-- MODELS_JSON_PATH: path to models.json file
 - MODEL_IDS: comma-separated model IDs
 
 Outputs to GITHUB_OUTPUT:
@@ -13,7 +12,45 @@ Outputs to GITHUB_OUTPUT:
 import json
 import os
 import sys
-from pathlib import Path
+
+
+# Model configurations dictionary
+MODELS = {
+    "claude-sonnet-4-5-20250929": {
+        "id": "claude-sonnet-4-5-20250929",
+        "display_name": "Claude Sonnet 4.5",
+        "llm_config": {
+            "model": "litellm_proxy/claude-sonnet-4-5-20250929",
+            "temperature": 0.0,
+        },
+    },
+    "claude-haiku-4-5-20251001": {
+        "id": "claude-haiku-4-5-20251001",
+        "display_name": "Claude Haiku 4.5",
+        "llm_config": {
+            "model": "litellm_proxy/claude-haiku-4-5-20251001",
+            "temperature": 0.0,
+        },
+    },
+    "gpt-5-mini-2025-08-07": {
+        "id": "gpt-5-mini-2025-08-07",
+        "display_name": "GPT-5 Mini",
+        "llm_config": {
+            "model": "litellm_proxy/gpt-5-mini-2025-08-07",
+            "temperature": 1.0,
+        },
+    },
+    "deepseek-chat": {
+        "id": "deepseek-chat",
+        "display_name": "DeepSeek Chat",
+        "llm_config": {"model": "litellm_proxy/deepseek/deepseek-chat"},
+    },
+    "kimi-k2-thinking": {
+        "id": "kimi-k2-thinking",
+        "display_name": "Kimi K2 Thinking",
+        "llm_config": {"model": "litellm_proxy/moonshot/kimi-k2-thinking"},
+    },
+}
 
 
 def error_exit(msg: str, exit_code: int = 1) -> None:
@@ -30,11 +67,10 @@ def get_required_env(key: str) -> str:
     return value
 
 
-def find_models_by_id(models: list[dict], model_ids: list[str]) -> list[dict]:
+def find_models_by_id(model_ids: list[str]) -> list[dict]:
     """Find models by ID. Fails fast on missing ID.
 
     Args:
-        models: List of model dictionaries from models.json
         model_ids: List of model IDs to find
 
     Returns:
@@ -43,33 +79,26 @@ def find_models_by_id(models: list[dict], model_ids: list[str]) -> list[dict]:
     Raises:
         SystemExit: If any model ID is not found
     """
-    models_by_id = {m["id"]: m for m in models}
     resolved = []
     for model_id in model_ids:
-        if model_id not in models_by_id:
-            error_exit(f"Model ID '{model_id}' not found")
-        resolved.append(models_by_id[model_id])
+        if model_id not in MODELS:
+            available = ", ".join(sorted(MODELS.keys()))
+            error_exit(
+                f"Model ID '{model_id}' not found. Available models: {available}"
+            )
+        resolved.append(MODELS[model_id])
     return resolved
 
 
 def main() -> None:
-    models_json_path = get_required_env("MODELS_JSON_PATH")
     model_ids_str = get_required_env("MODEL_IDS")
     github_output = get_required_env("GITHUB_OUTPUT")
-
-    # Load models.json
-    models_path = Path(models_json_path)
-    if not models_path.exists():
-        error_exit(f"Models file not found: {models_path}")
-
-    with open(models_path, encoding="utf-8") as f:
-        models = json.load(f)
 
     # Parse requested model IDs
     model_ids = [mid.strip() for mid in model_ids_str.split(",") if mid.strip()]
 
     # Resolve model configs
-    resolved = find_models_by_id(models, model_ids)
+    resolved = find_models_by_id(model_ids)
 
     # Output as JSON
     models_json = json.dumps(resolved, separators=(",", ":"))

@@ -69,27 +69,25 @@ jobs:
                       'workflow_dispatch' && github.event.inputs.sdk_ref) || github.ref }}
                   fetch-depth: 0
 
-            - name: Load model IDs from models.json
+            - name: Load model IDs from Python script
               id: load-models
               run: |
-                  # Extract all model IDs from models.json
-                  ALLOWED_MODEL_IDS=$(jq -c '[.[].id]' .github/run-eval/models.json)
+                  # Extract all model IDs from resolve_model_configs.py
+                  ALLOWED_MODEL_IDS=$(python3 << 'EOF'
+                  import sys
+                  sys.path.insert(0, '.github/run-eval')
+                  from resolve_model_configs import MODELS
+                  import json
+                  print(json.dumps(list(MODELS.keys())))
+                  EOF
+                  )
                   DEFAULT_MODEL=$(echo "$ALLOWED_MODEL_IDS" | jq -r '.[0]')
                   if [ -z "$DEFAULT_MODEL" ] || [ "$DEFAULT_MODEL" = "null" ]; then
-                    echo "No models configured in models.json" >&2
+                    echo "No models configured" >&2
                     exit 1
                   fi
                   echo "allowed_model_ids=$ALLOWED_MODEL_IDS" >> "$GITHUB_OUTPUT"
                   echo "default_model=$DEFAULT_MODEL" >> "$GITHUB_OUTPUT"
-
-            - name: Validate authorization
-              if: github.event_name == 'pull_request_target' || github.event_name == 'workflow_dispatch'
-              run: |
-                  ACTOR="${{ github.actor }}"
-                  if ! grep -Fx "$ACTOR" .github/run-eval/authorized-actors.txt >/dev/null; then
-                    echo "User $ACTOR is not authorized to trigger eval." >&2
-                    exit 1
-                  fi
 
             - name: Resolve parameters
               id: params
@@ -162,7 +160,6 @@ jobs:
               id: resolve-models
               env:
                   MODEL_IDS: ${{ steps.params.outputs.models }}
-                  MODELS_JSON_PATH: .github/run-eval/models.json
               run: |
                   python3 .github/run-eval/resolve_model_configs.py
 
@@ -191,6 +188,7 @@ jobs:
                   EVAL_WORKFLOW: ${{ env.EVAL_WORKFLOW }}
                   EVAL_BRANCH: ${{ github.event.inputs.eval_branch || 'main' }}
                   TRIGGER_REASON: ${{ github.event.inputs.reason }}
+                  PR_NUMBER: ${{ steps.params.outputs.pr_number }}
               run: |
                   echo "Dispatching evaluation workflow with SDK commit: $SDK_SHA (eval branch: $EVAL_BRANCH)"
                   PAYLOAD=$(jq -n \
@@ -199,7 +197,8 @@ jobs:
                     --argjson models "$MODELS_JSON" \
                     --arg ref "$EVAL_BRANCH" \
                     --arg reason "$TRIGGER_REASON" \
-                    '{ref: $ref, inputs: {sdk_commit: $sdk, eval_limit: $eval_limit, models_json: ($models | tostring), trigger_reason: $reason}}')
+                    --arg pr "$PR_NUMBER" \
+                    '{ref: $ref, inputs: {sdk_commit: $sdk, eval_limit: $eval_limit, models_json: ($models | tostring), trigger_reason: $reason, pr_number: $pr}}')
                   RESPONSE=$(curl -sS -o /tmp/dispatch.out -w "%{http_code}" -X POST \
                     -H "Authorization: token $PAT_TOKEN" \
                     -H "Accept: application/vnd.github+json" \

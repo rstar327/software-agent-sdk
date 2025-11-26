@@ -1,3 +1,4 @@
+import json
 from collections.abc import Sequence
 
 from openhands.sdk.context.view import View
@@ -54,7 +55,6 @@ class APIBasedCritic(CriticBase, CriticClient):
 
         # Add top labels to explanation
         sorted_probs = sorted(prob_map.probs.items(), key=lambda x: x[1], reverse=True)
-        top_labels = [f"{k}: {v:.2f}" for k, v in sorted_probs[:3]]
-        explanation.append(f"Top labels: {', '.join(top_labels)}")
+        explanation.append(json.dumps(dict(sorted_probs)))
 
         return CriticResult(score=score, message="; ".join(explanation))

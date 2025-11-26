@@ -80,27 +80,32 @@ jobs:
 
             - name: Load model IDs
               id: load-models
-              env:
-                  PYTHONPATH: ${{ github.workspace }}/.github/run-eval
               run: |
-                  # Extract model IDs from resolve_model_configs.py
+                  # Extract model IDs by parsing resolve_model_configs.py
                   python3 - <<'PYEOF' >> "$GITHUB_OUTPUT"
-                  import sys
+                  import re
                   import json
 
-                  try:
-                      from resolve_model_configs import MODELS_CONFIG
-                      ids = list(MODELS_CONFIG.keys())
-                      if not ids:
-                          print("ERROR: No models configured", file=sys.stderr)
-                          sys.exit(1)
-                      print(f"allowed_model_ids={json.dumps(ids)}")
-                      print(f"default_model={ids[0]}")
-                  except Exception as e:
-                      print(f"ERROR loading models: {e}", file=sys.stderr)
-                      import traceback
-                      traceback.print_exc()
+                  # Read the resolve_model_configs.py file
+                  with open('.github/run-eval/resolve_model_configs.py', 'r') as f:
+                      content = f.read()
+
+                  # Extract all model IDs from the MODELS_CONFIG dictionary
+                  # Match lines like: "model-id": {
+                  pattern = r'"([^"]+)":\s*\{'
+                  matches = re.findall(pattern, content)
+
+                  # Filter to get only model IDs (keys in MODELS_CONFIG dict)
+                  # We need to find the MODELS_CONFIG section and extract IDs from there
+                  models_section = content[content.find('MODELS_CONFIG = {'):content.find('\n}', content.find('MODELS_CONFIG'))]
+                  ids = re.findall(r'"([^"]+)":\s*\{', models_section)
+
+                  if not ids:
+                      print("ERROR: No models configured", file=sys.stderr)
                       sys.exit(1)
+
+                  print(f"allowed_model_ids={json.dumps(ids)}")
+                  print(f"default_model={ids[0]}")
                   PYEOF
 
             - name: Resolve parameters
